@@ -718,6 +718,7 @@ private fun AddScriptDialog(
     )
 }
 
+@Composable
 private fun AddSubscribeDialog(
     title: String,
     urlSupportingText: String,
