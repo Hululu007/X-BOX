@@ -73,8 +73,8 @@ import com.github.tvbox.osc.ui.components.AVBoxAlertDialog
 import com.github.tvbox.osc.ui.components.LocalTopBarGlassPauseRecording
 import com.github.tvbox.osc.ui.components.LocalSheetDismissThen
 import com.github.tvbox.osc.ui.components.LocalSheetHost
-import com.github.tvbox.osc.ui.components.SheetHost
 import com.github.tvbox.osc.ui.components.SheetHostState
+import com.github.tvbox.osc.ui.components.TopLayerSheetHost
 import com.github.tvbox.osc.ui.currentWindowWidthClass
 import com.github.tvbox.osc.ui.navbar.FloatingNavBar
 import com.github.tvbox.osc.ui.navbar.GlassTabItem
@@ -412,7 +412,7 @@ private fun MainContent() {
                     }
                 }
             }
-            SheetHost(sheetHost)
+            TopLayerSheetHost(sheetHost)
         }
     }
 }
