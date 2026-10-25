@@ -48,6 +48,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -603,17 +604,31 @@ fun HomePage(
                 filtered.filter { sourceKind == SiteKind.ALL || siteKindOf(it.api) == sourceKind }
             }
             val perRow = if (sourceGrid) 2 else 1
-            CapsuleSegmentedButton(
-                options = SiteKind.values().map { SegmentOption(it.label, it) },
-                selectedValue = sourceKind,
-                onOptionSelected = { sourceKind = it },
-                style = SegmentStyle.Separated,
-                containerColor = MaterialTheme.colorScheme.surfaceBright,
-                pressMorph = true,
+            Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
-            )
+                    .weight(1f)
+                    .padding(start = 16.dp, end = 8.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CapsuleSegmentedButton(
+                    options = SiteKind.values().map { SegmentOption(it.label, it) },
+                    selectedValue = sourceKind,
+                    onOptionSelected = { sourceKind = it },
+                    style = SegmentStyle.Separated,
+                    containerColor = MaterialTheme.colorScheme.surfaceBright,
+                    pressMorph = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                )
+                IconButton(onClick = { vm.reload() }) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = "刷新站点",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             val listModifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 420.dp)
