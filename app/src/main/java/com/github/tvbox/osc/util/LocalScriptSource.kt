@@ -217,6 +217,32 @@ object LocalScriptSource {
         }
     }
 
+    /**
+     * 修改单个站点的 name / ext / proxy（工作区与回收站均可改）。
+     * 文件位置不可改——改了就不再是那个脚本。name 与本目录其它站点重名时自动追加序号。
+     */
+    fun updateSite(dir: String, key: String, name: String?, ext: String?, proxy: String?): Boolean {
+        val pair = load(dir)
+        val sites = pair.first
+        val bac = pair.second
+        val target = sites.firstOrNull { it.optString("key") == key }
+            ?: bac.firstOrNull { it.optString("key") == key }
+            ?: return false
+        if (name != null) {
+            val clean = name.trim()
+            if (clean.isNotEmpty()) {
+                val taken = HashSet<String>()
+                for (o in sites) if (o !== target) taken.add(o.optString("name"))
+                for (o in bac) if (o !== target) taken.add(o.optString("name"))
+                target.put("name", uniqueName(clean, taken))
+            }
+        }
+        if (ext != null) target.put("ext", ext)
+        if (proxy != null) target.put("proxy", proxy)
+        save(dir, sites, bac)
+        return true
+    }
+
     fun save(dir: String, sites: List<JSONObject>, bac: List<JSONObject>) {
         val store = readStore(dir)
         val sa = JSONArray()
