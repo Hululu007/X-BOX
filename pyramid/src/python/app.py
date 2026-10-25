@@ -21,22 +21,6 @@ def setSiteProxy(url):
         return ''
 
 
-def startDetail(key, id, name='', pic=''):
-    # 兼容影视TV 系脚本的"跳详情页"调用:name/pic 给了默认值,
-    # 脚本用 startDetail(key, id) 这种三参写法也能命中同一个入口。
-    try:
-        from com.github.tvbox.osc.util import DetailIntent
-        from com.github.tvbox.osc.base import App
-        ctx = App.getInstance()
-        if ctx is None:
-            return False
-        DetailIntent.start(ctx, key, id, name, pic)
-        return True
-    except Exception as e:
-        print('startDetail failed: ' + str(e))
-        return False
-
-
 def createFile(file_path):
     if os.path.exists(file_path) is False:
         os.makedirs(file_path)

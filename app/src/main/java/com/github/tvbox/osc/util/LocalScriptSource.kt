@@ -261,7 +261,7 @@ object LocalScriptSource {
         for (o in bac) taken.add(o.optString("name"))
         val proxy = if (url.contains("#$PROXY_KEY")) PROXY_FLAG else ""
         val o = JSONObject()
-        o.put("key", (MD5.encode(url) ?: url).take(12))
+        o.put("key", MD5.encode(url).take(12))
         o.put("name", uniqueName(name.ifBlank { url } + "[url]", taken))
         o.put("type", 6)
         o.put("api", url)

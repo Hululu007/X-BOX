@@ -18,7 +18,6 @@ import com.github.tvbox.osc.net.SearchHelper
 import com.github.tvbox.osc.player.PlaybackService
 import com.github.tvbox.osc.player.PlaybackSession
 import com.github.tvbox.osc.sourcedata.SourceViewModel
-import com.github.tvbox.osc.util.DetailIntent
 import com.github.tvbox.osc.util.HistoryHelper
 import com.github.tvbox.osc.util.LOG
 import com.github.tvbox.osc.util.LanguageManager
@@ -166,13 +165,11 @@ class DetailViewModel : ViewModel() {
 
     private fun parseTarget(intent: Intent?): DetailNavStack.Target? {
         val bundle = intent?.extras ?: return null
-        // 走 DetailIntent 兼容层：认 key/id/name/pic 等多种别名，
-        // 第三方 jar、py 脚本按影视TV 约定塞的 extra 也能读出来
         return DetailNavStack.Target(
-            vodId = DetailIntent.id(bundle),
-            sourceKey = DetailIntent.sourceKey(bundle),
-            title = DetailIntent.title(bundle),
-            picture = DetailIntent.picture(bundle),
+            vodId = bundle.getString("id", "").orEmpty(),
+            sourceKey = bundle.getString("sourceKey", "").orEmpty(),
+            title = bundle.getString("title", "").orEmpty(),
+            picture = bundle.getString("picture", "").orEmpty(),
             fromCollect = bundle.getBoolean("collect", false),
         )
     }

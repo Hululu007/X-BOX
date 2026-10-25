@@ -444,44 +444,24 @@ fun TextEditDialog(
     initialText: String,
     onDismiss: () -> Unit,
     onConfirm: (String) -> Unit,
-    placeholder: String? = null,
-    singleLine: Boolean = true,
-    fieldHeight: Dp = 0.dp,
 ) {
     var text by rememberSaveable { mutableStateOf(initialText) }
     AVBoxAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            val fieldModifier = Modifier.fillMaxWidth().then(
-                if (fieldHeight > 0.dp) {
-                    Modifier.height(fieldHeight).verticalScroll(rememberScrollState())
-                } else {
-                    Modifier
-                },
-            )
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                modifier = fieldModifier,
-                singleLine = singleLine,
-                minLines = if (singleLine) 1 else 2,
-                maxLines = if (singleLine) 1 else if (fieldHeight > 0.dp) 8 else 2,
-                placeholder = {
-                    Text(placeholder ?: stringResource(R.string.dialog_api_url_hint))
-                },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                placeholder = { Text(stringResource(R.string.dialog_api_url_hint)) },
             )
         },
         confirmButton = {
             val dismissThen = LocalSheetDismissThen.current
             TextButton(onClick = { dismissThen { onConfirm(text.trim()) } }) {
                 Text(stringResource(R.string.common_confirm))
-            }
-        },
-        dismissButton = {
-            val dismissThen = LocalSheetDismissThen.current
-            TextButton(onClick = { dismissThen { onDismiss() } }) {
-                Text(stringResource(R.string.common_cancel))
             }
         },
     )

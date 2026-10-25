@@ -46,36 +46,12 @@ object SiteProxy {
         KV.put(HawkConfig.PROXY_URL, url.trim())
     }
 
-    /**
-     * 站点配置解析出的实际代理地址；空串表示配置上不走代理。
-     *
-     * 【关键字开关】与 appmenu 的 MenuProxy.KEY 同款：
-     * proxy 字段为空时，若站点名 / api 路径（含文件夹名或文件名）里出现
-     * 关键字「代理」，等同于填了 "proxy" 占位标记 —— 本地脚本目录导入时
-     * 不必逐个改 JSON，把目录或文件改名即可整批开关。
-     */
+    /** 站点配置解析出的实际代理地址；空串表示配置上不走代理 */
     fun resolve(bean: SourceBean?): String {
-        if (bean == null) return ""
-        val raw = bean.proxy?.trim() ?: ""
-        if (raw.isNotEmpty()) {
-            if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("socks")) return raw
-            return configuredUrl()
-        }
-        if (matchKeyword(bean)) return configuredUrl()
-        return ""
-    }
-
-    /** 关键字「代理」：命中站点名或 api 路径（文件夹名 / 文件名任一含即可） */
-    private const val KEY_WORD = "代理"
-
-    @JvmStatic
-    fun matchKeyword(bean: SourceBean?): Boolean {
-        if (bean == null) return false
-        val name = bean.name ?: ""
-        if (name.contains(KEY_WORD)) return true
-        val api = bean.api ?: ""
-        if (api.contains(KEY_WORD)) return true
-        return false
+        val raw = bean?.proxy?.trim() ?: return ""
+        if (raw.isEmpty()) return ""
+        if (raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("socks")) return raw
+        return configuredUrl()
     }
 
     /** 只看站点配置的结论（忽略临时切换） */
@@ -135,11 +111,7 @@ object SiteProxy {
             return
         }
         try {
-            // 注意：hosts 不能用 "*"。OkProxySelector.containOrMatch 走的是
-            // text.contains(rule) || text.matches(Regex(rule))，而 Regex("*") 是非法正则、
-            // 会抛异常被 catch 吞掉，contains("*") 又恒为 false —— 结果任何域名都匹配不上，
-            // 代理等于没开。hosts 用空串：contains("") 恒真，且不依赖正则。
-            val json = "[{\"name\":\"site_proxy\",\"hosts\":[\"\"],\"urls\":[\"" + url + "\"]}]"
+            val json = "[{\"name\":\"site_proxy\",\"hosts\":[\"*\"],\"urls\":[\"" + url + "\"]}]"
             val array = JsonParser.parseString(json).asJsonArray
             OkGoHelper.setProxyList(ProxyRule.arrayFrom(array))
         } catch (th: Throwable) {
@@ -156,7 +128,7 @@ object SiteProxy {
             val app = loader?.pyApp ?: return
             app.callAttr("setSiteProxy", url)
         } catch (th: Throwable) {
-            LOG.d(TAG, "python proxy sync skipped | " + th.message)
+            LOG.d("$TAG: python proxy sync skipped | " + th.message)
         }
     }
 }

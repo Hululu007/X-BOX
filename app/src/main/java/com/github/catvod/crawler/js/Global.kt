@@ -1,7 +1,6 @@
 package com.github.catvod.crawler.js
 
 import android.os.SystemClock
-import android.util.Base64
 import android.webkit.WebSettings
 
 import androidx.annotation.Keep
@@ -10,7 +9,6 @@ import com.github.catvod.Proxy
 import com.github.catvod.crawler.js.rsa.RSAEncrypt
 import com.github.tvbox.osc.util.AppContextHolder
 import com.github.tvbox.osc.util.LOG
-import com.github.tvbox.osc.util.MD5
 import com.github.tvbox.osc.util.UA
 import com.whl.quickjs.wrapper.ContextSetter
 import com.whl.quickjs.wrapper.Function
@@ -182,34 +180,6 @@ class Global {
 
     @Keep
     @Function
-    fun md5X(text: String?): String {
-        return try {
-            MD5.encode(text ?: "") ?: ""
-        } catch (e: Exception) {
-            ""
-        }
-    }
-
-    @Keep
-    @Function
-    fun base64Encode(text: String?): String {
-        return try {
-            Base64.encodeToString((text ?: "").toByteArray(), Base64.NO_WRAP)
-        } catch (e: Exception) {
-            ""
-        }
-    }
-
-    @Keep
-    @Function
-    fun base64Decode(text: String?): String {
-        return try {
-            String(Base64.decode(text ?: "", Base64.DEFAULT))
-        } catch (e: Exception) {
-            ""
-        }
-    }
-
     fun s2t(text: String?): String? {
         try {
             return Trans.s2t(false, text)

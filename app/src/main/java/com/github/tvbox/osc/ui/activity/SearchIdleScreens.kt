@@ -28,26 +28,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import android.widget.Toast
 import com.github.tvbox.osc.R
-import com.github.tvbox.osc.api.ApiConfig
-import com.github.tvbox.osc.bean.SourceBean
 import com.github.tvbox.osc.net.SearchSettings
-import com.github.tvbox.osc.ui.components.SearchActionButton
+import com.github.tvbox.osc.ui.components.CapsuleSegmentedButton
+import com.github.tvbox.osc.ui.components.SegmentOption
+import com.github.tvbox.osc.ui.components.SegmentStyle
 import com.github.tvbox.osc.ui.components.SettingsIconBadge
 import com.github.tvbox.osc.ui.components.clearFocusOnDrag
 import com.github.tvbox.osc.ui.page.ManageActionIcon
@@ -65,6 +59,8 @@ internal fun SearchIdleContent(
     onSearch: (String) -> Unit,
     onClearHistory: () -> Unit,
     onRemoveHistory: (String) -> Unit,
+    scope: SearchSettings.SearchScope,
+    onScopeChange: (SearchSettings.SearchScope) -> Unit,
 ) {
     val incognito = HistoryHelper.isIncognito()
     val focusManager = LocalFocusManager.current
@@ -74,8 +70,11 @@ internal fun SearchIdleContent(
             .verticalScroll(rememberScrollState())
             .clearFocusOnDrag(focusManager),
     ) {
-        Spacer(Modifier.height(topPad - 20.dp))
-        SearchScopeActions(query = query, onSearch = onSearch)
+        Spacer(Modifier.height(topPad + 8.dp))
+        SearchScopeSelector(
+            scope = scope,
+            onScopeChange = onScopeChange,
+        )
         Spacer(Modifier.height(12.dp))
         Column(
             modifier = Modifier
@@ -264,74 +263,52 @@ internal fun SearchIdleContent(
     }
 }
 
-/**
- * 搜索范围三按钮，放在搜索历史上方。
- *
- * 全站 = 所有可搜索站点；站内 = 当前首页站点；选中 = 搜索设置里勾选的站点（为空时退回全站）。
- * 点了先落范围，如果搜索框已经有词就直接搜，没词就只提示已切换（没有词也没法搜）。
- */
 @Composable
-private fun SearchScopeActions(query: String, onSearch: (String) -> Unit) {
-    val context = LocalContext.current
-    val allKeys = remember {
-        ApiConfig.get().getSourceBeanList().filter(SourceBean::isSearchable).map { it.key.orEmpty() }.toSet()
-    }
-    fun currentMode(): Int {
-        val sel = SearchSettings.currentSelection()
-        val homeKey = ApiConfig.get().getHomeSourceBean()?.key.orEmpty()
-        return when {
-            sel == null || sel.isEmpty() -> 0
-            homeKey.isNotEmpty() && sel.size == 1 && sel.contains(homeKey) -> 1
-            else -> 2
-        }
-    }
-    var mode by remember { mutableIntStateOf(currentMode()) }
-    fun apply(range: Set<String>, hintRes: Int, nextMode: Int) {
-        mode = nextMode
-        SearchSettings.putSourcesForSearch(range)
-        SearchViewModel.loadCheckedSources()
-        val text = query.trim()
-        if (text.isEmpty()) {
-            Toast.makeText(context, context.getString(hintRes), Toast.LENGTH_SHORT).show()
-        } else {
-            onSearch(text)
-        }
-    }
-    Row(
+internal fun SearchScopeSelector(
+    scope: SearchSettings.SearchScope,
+    onScopeChange: (SearchSettings.SearchScope) -> Unit,
+) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(start = 12.dp, end = 12.dp),
     ) {
-        SearchActionButton(
-            text = stringResource(R.string.search_action_all),
-            modifier = Modifier.weight(1f),
-            selected = mode == 0,
-            onClick = { apply(allKeys, R.string.search_scope_all, 0) },
-        )
-        SearchActionButton(
-            text = stringResource(R.string.search_action_home),
-            modifier = Modifier.weight(1f),
-            selected = mode == 1,
-            onClick = {
-                val homeKey = ApiConfig.get().getHomeSourceBean()?.key
-                val range = if (homeKey.isNullOrEmpty()) allKeys else setOf(homeKey)
-                apply(range, R.string.search_scope_home, 1)
-            },
-        )
-        SearchActionButton(
-            text = stringResource(R.string.search_action_selected),
-            modifier = Modifier.weight(1f),
-            selected = mode == 2,
-            onClick = {
-                val selection = SearchSettings.currentSelection()
-                val range = when {
-                    selection == null -> allKeys
-                    selection.isEmpty() -> allKeys
-                    else -> selection.filter { it in allKeys }.toSet().ifEmpty { allKeys }
-                }
-                apply(range, R.string.search_scope_selected, 2)
-            },
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            SettingsIconBadge(R.drawable.ic_pref_search_threads, stringResource(R.string.search_scope_title))
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = stringResource(R.string.search_scope_title),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        CapsuleSegmentedButton(
+            options = listOf(
+                SegmentOption(
+                    label = stringResource(R.string.search_scope_all),
+                    value = SearchSettings.SearchScope.All,
+                ),
+                SegmentOption(
+                    label = stringResource(R.string.search_scope_current),
+                    value = SearchSettings.SearchScope.Current,
+                ),
+                SegmentOption(
+                    label = stringResource(R.string.search_scope_selected),
+                    value = SearchSettings.SearchScope.Selected,
+                ),
+            ),
+            selectedValue = scope,
+            onOptionSelected = onScopeChange,
+            style = SegmentStyle.Separated,
+            containerColor = MaterialTheme.colorScheme.surfaceBright,
+            pressMorph = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
         )
     }
 }

@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,16 +34,14 @@ import com.github.tvbox.osc.R
 import com.github.tvbox.osc.ui.components.AVBoxAlertDialog
 import com.github.tvbox.osc.ui.components.AppTopBarScaffold
 import com.github.tvbox.osc.ui.components.CapsuleSegmentedButton
-import com.github.tvbox.osc.ui.components.SiteCardShapeSingle
-import com.github.tvbox.osc.ui.components.SiteKind
-import com.github.tvbox.osc.ui.components.SiteSourceCard
-import com.github.tvbox.osc.ui.components.siteKindOf
 import com.github.tvbox.osc.ui.components.SegmentOption
 import com.github.tvbox.osc.ui.components.TopBarActionBox
 import com.github.tvbox.osc.util.LocalScriptSource
 import org.json.JSONObject
 
-
+private enum class SiteFilter(val label: String) {
+    ALL("全部"), PY("py"), JS("js"), HTML("html"), URL("url")
+}
 
 private fun JSONObject.api(): String = optString("api").orEmpty()
 private fun JSONObject.name(): String = optString("name").orEmpty()
@@ -55,7 +52,13 @@ private fun JSONObject.proxy(): String = optString("proxy").orEmpty()
 private fun JSONObject.isRemote(): Boolean =
     api().startsWith("http://") || api().startsWith("https://")
 
-
+private fun JSONObject.kind(): SiteFilter = when {
+    isRemote() -> SiteFilter.URL
+    api().endsWith(".py") -> SiteFilter.PY
+    api().endsWith(".js") -> SiteFilter.JS
+    api().endsWith(".html") -> SiteFilter.HTML
+    else -> SiteFilter.ALL
+}
 
 /** 副标题：本地显示带扩展名的文件名，远程显示完整 url */
 private fun JSONObject.sub(): String {
@@ -80,7 +83,7 @@ fun SiteManageScreen(
     onReloadSource: () -> Unit,
 ) {
     var reload by remember(dir) { mutableStateOf(0) }
-    var filter by remember { mutableStateOf(SiteKind.ALL) }
+    var filter by remember { mutableStateOf(SiteFilter.ALL) }
     var addOpen by remember { mutableStateOf(false) }
     val keepSel = remember { mutableStateListOf<String>() }
     val goneSel = remember { mutableStateListOf<String>() }
@@ -89,8 +92,8 @@ fun SiteManageScreen(
     val sites = data.first
     val bac = data.second
 
-    val visibleSites = sites.filter { filter == SiteKind.ALL || siteKindOf(it.api()) == filter }
-    val visibleBac = bac.filter { filter == SiteKind.ALL || siteKindOf(it.api()) == filter }
+    val visibleSites = sites.filter { filter == SiteFilter.ALL || it.kind() == filter }
+    val visibleBac = bac.filter { filter == SiteFilter.ALL || it.kind() == filter }
 
     val refresh: () -> Unit = {
         reload++
@@ -167,7 +170,7 @@ fun SiteManageScreen(
 
             // 分类胶囊
             CapsuleSegmentedButton(
-                options = SiteKind.values().map { SegmentOption(it.label, it) },
+                options = SiteFilter.values().map { SegmentOption(it.label, it) },
                 selectedValue = filter,
                 onOptionSelected = { filter = it },
                 modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -325,19 +328,51 @@ private fun SiteColumn(
         ) {
             items(list, key = { it.key() }) { item ->
                 val on = selected.contains(item.key())
-                val tag = ArrayList<String>()
-                tag.add(item.sub())
-                if (item.ext().isNotEmpty()) tag.add("ext")
-                if (item.proxy().isNotEmpty()) tag.add("代理")
-                SiteSourceCard(
-                    name = item.name().ifEmpty { item.key() },
-                    subtitle = tag.joinToString(" · "),
-                    selected = on,
-                    dotOnLeft = true,
-                    shape = SiteCardShapeSingle,
-                    onClick = { onToggle(item.key()) },
+                Surface(
                     modifier = Modifier.fillMaxWidth(),
-                )
+                    onClick = { onToggle(item.key()) },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (on) {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surface
+                    },
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = on,
+                            onCheckedChange = { onToggle(item.key()) },
+                            modifier = Modifier.size(20.dp),
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = MaterialTheme.colorScheme.primary,
+                                uncheckedColor = MaterialTheme.colorScheme.outline,
+                            ),
+                        )
+                        Column(Modifier.weight(1f).padding(start = 2.dp)) {
+                            Text(
+                                item.name(),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            val tag = ArrayList<String>()
+                            tag.add(item.sub())
+                            if (item.ext().isNotEmpty()) tag.add("ext")
+                            if (item.proxy().isNotEmpty()) tag.add("代理")
+                            Text(
+                                tag.joinToString(" · "),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
             }
         }
     }

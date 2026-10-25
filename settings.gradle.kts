@@ -32,7 +32,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "X-BOX"
+rootProject.name = "AVBox"
 include(":app")
 include(":quickjs")
 include(":pyramid")

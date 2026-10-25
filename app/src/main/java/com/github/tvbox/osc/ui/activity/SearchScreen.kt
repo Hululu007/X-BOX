@@ -84,6 +84,7 @@ fun SearchScreen(vm: SearchViewModel = rememberSearchViewModel()) {
     val sitesEmpty by vm.sitesEmpty.collectAsState()
     val vodMenu = rememberVodCardMenuState()
     var resultLayout by remember { mutableStateOf(SearchSettings.resultLayout()) }
+    val searchScope by vm.scope.collectAsState()
 
     LaunchedEffect(Unit) {
         if (SearchViewModel.isCheckedSourcesStale()) {
@@ -187,6 +188,8 @@ fun SearchScreen(vm: SearchViewModel = rememberSearchViewModel()) {
                         HistoryHelper.removeSearchHistory(word)
                         history = KV.get(HawkConfig.SEARCH_HISTORY, ArrayList())
                     },
+                    scope = searchScope,
+                    onScopeChange = { vm.setScope(it) },
                 )
             } else {
                 SearchResultsContent(

@@ -43,8 +43,6 @@ object VodImages {
 
     private fun picClient(): OkHttpClient = OkHttpClient.Builder()
         .apply { OkGoHelper.getDefaultClient()?.dns?.let { dns(it) } }
-        .proxySelector(OkGoHelper.proxySelector())
-        .proxyAuthenticator(OkGoHelper.proxyAuthenticator())
         .cache(picCache()?.let { Cache(it, PIC_HTTP_CACHE_MB * 1024L * 1024L) })
         .addInterceptor(picHeaderInterceptor)
         .addNetworkInterceptor(picForceCacheInterceptor)

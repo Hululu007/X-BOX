@@ -48,6 +48,9 @@ class SearchViewModel(initialTitle: String? = null) : ViewModel() {
 
     val hotSearch = MutableStateFlow<List<String>>(emptyList())
 
+    /** 当前搜索范围：全站 / 站内 / 选中。 */
+    val scope = MutableStateFlow(SearchSettings.scope())
+
     val suggest = MutableStateFlow<List<String>>(emptyList())
 
     private var suggestJob: Job? = null
@@ -213,6 +216,35 @@ class SearchViewModel(initialTitle: String? = null) : ViewModel() {
         emptyList()
     }
 
+    /** 切换搜索范围；返回本次是否顺带触发了搜索（有关键词时立即重搜）。 */
+    fun setScope(next: SearchSettings.SearchScope): Boolean {
+        if (scope.value == next) return false
+        scope.value = next
+        SearchSettings.setScope(next)
+        val t = searchedTitle.value.trim()
+        if (t.isEmpty()) return false
+        search(t)
+        return true
+    }
+
+    /**
+     * 按当前范围解析出参与搜索的站点 key 集合；null 表示不限制（全站）。
+     * - All：全部可搜索站点
+     * - Current：仅当前首页站点
+     * - Selected：搜索设置里勾选的站点，未勾选任何站点时退回全站
+     */
+    fun resolveScopeKeys(): Set<String>? {
+        val homeKey = ApiConfig.get().getHomeSourceBean().key
+        return when (scope.value) {
+            SearchSettings.SearchScope.Current -> if (homeKey.isNullOrEmpty()) emptySet() else setOf(homeKey)
+            SearchSettings.SearchScope.Selected -> {
+                val picked = SearchSettings.currentSelection()
+                if (picked.isNullOrEmpty()) null else picked
+            }
+            else -> null
+        }
+    }
+
     fun search(title: String) {
         val t = title.trim()
         if (t.isEmpty()) return
@@ -243,9 +275,9 @@ class SearchViewModel(initialTitle: String? = null) : ViewModel() {
         }
         pendingSources.clear()
         val home = ApiConfig.get().getHomeSourceBean()
-        val checked = checkedSources
+        val scopeKeys = resolveScopeKeys()
         val sources = ApiConfig.get().getSourceBeanList()
-            .filter { it.isSearchable() && (checked == null || checked.containsKey(it.key)) }
+            .filter { it.isSearchable() && (scopeKeys == null || scopeKeys.contains(it.key)) }
             .sortedBy { it.key != home.key }
         arriveSeq = 0
         results.value = sources.map { SourceResult(it.key.orEmpty(), it.name.orEmpty(), ResultState.Pending, emptyList()) }

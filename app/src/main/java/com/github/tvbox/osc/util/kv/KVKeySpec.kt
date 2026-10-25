@@ -56,7 +56,6 @@ class KVKeySpec : KVDecoder.TypeRegistry {
             register(HawkConfig.DANMU_API, "")
             register(HawkConfig.PROXY_URL, "")
             register(HawkConfig.SITE_PROXY_OVERRIDE, object : TypeToken<HashMap<String, Boolean>>() {})
-            register(HawkConfig.SITE_EXT_OVERRIDE, object : TypeToken<HashMap<String, String>>() {})
             register(HawkConfig.THEME_PALETTE_STYLE, "")
             register(HawkConfig.PICTURE_PRESET, "")
             register(HawkConfig.ANIME4K_TIER, "")
@@ -172,7 +171,6 @@ class KVKeySpec : KVDecoder.TypeRegistry {
             })
             register(HawkConfig.LOCAL_SOURCE_TREES, object : TypeToken<ArrayList<String>>() {
             })
-            register(HawkConfig.HOME_SITE_COLUMNS, 2)
             register(HawkConfig.LIVE_GROUP_LIST, TypeToken.get(JsonArray::class.java))
 
             register(HawkConfig.LIVE_WEB_HEADER, object : TypeToken<HashMap<String, String>>() {

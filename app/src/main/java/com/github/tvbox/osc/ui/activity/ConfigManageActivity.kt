@@ -15,7 +15,6 @@ import com.github.tvbox.osc.base.BaseActivity
 import com.github.tvbox.osc.io.cancelLocalConfig
 import com.github.tvbox.osc.io.handleLocalConfigResult
 import com.github.tvbox.osc.io.handleLocalSourceTreeResult
-import com.github.tvbox.osc.io.LocalSourceTree
 import com.github.tvbox.osc.io.importLocalSource
 import com.github.tvbox.osc.io.startLocalConfig
 import com.github.tvbox.osc.ui.components.SheetHostScaffold
@@ -56,33 +55,6 @@ class ConfigManageActivity : BaseActivity() {
 
     fun launchLocalConfig(onResult: (name: String, api: String) -> Unit) {
         startLocalConfig(localConfigLauncher) { name, api -> onResult(name, api) }
-    }
-
-    private var folderPickCallback: ((String) -> Unit)? = null
-
-    private val folderPickLauncher =
-        registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-            val callback = folderPickCallback
-            folderPickCallback = null
-            if (uri == null || callback == null) return@registerForActivityResult
-            val path = LocalSourceTree.remember(this, uri)
-            if (path.isNullOrEmpty()) {
-                Toast.makeText(this, getString(R.string.toast_local_tree_denied), Toast.LENGTH_LONG).show()
-                return@registerForActivityResult
-            }
-            callback(path)
-        }
-
-    /** 选一个目录并把真实路径回调出去（用于“添加脚本”） */
-    fun launchFolderPick(onPicked: (path: String) -> Unit) {
-        folderPickCallback = onPicked
-        try {
-            folderPickLauncher.launch(null)
-        } catch (th: Throwable) {
-            folderPickCallback = null
-            LOG.e("ConfigManageActivity", th)
-            Toast.makeText(this, getString(R.string.toast_local_tree_denied), Toast.LENGTH_LONG).show()
-        }
     }
 
     private fun launchSourceTree() {

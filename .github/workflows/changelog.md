@@ -56,7 +56,7 @@
 ## v1.2.3
 - 优化细节
 - 优化 R8 规则，减小应用体积
-- 完整更新日志详见三个alpha版本https://github.com/kuby007/X-BOX/releases
+- 完整更新日志详见三个alpha版本https://github.com/XiaochangXu/AVBox/releases
 
 ---
 

@@ -8,6 +8,17 @@ object SearchSettings {
 
     enum class SearchLayout { Horizontal, Vertical }
 
+    /** 搜索范围：全站 / 站内（当前首页站点）/ 选中（搜索设置里勾选的站点）。 */
+    enum class SearchScope { All, Current, Selected }
+
+    private const val KEY_SEARCH_SCOPE = "search_scope"
+
+    private const val VALUE_SCOPE_ALL = "all"
+
+    private const val VALUE_SCOPE_CURRENT = "current"
+
+    private const val VALUE_SCOPE_SELECTED = "selected"
+
     private const val KEY_EXACT_MATCH = "search_exact_match"
 
     private const val KEY_RESULT_LAYOUT = "search_result_layout"
@@ -17,6 +28,23 @@ object SearchSettings {
     private const val VALUE_LAYOUT_VERTICAL = "vertical"
 
     private const val KEY_EMPTY_SOURCES = "search_sources_empty"
+
+    fun scope(): SearchScope = when (KV.get(KEY_SEARCH_SCOPE, VALUE_SCOPE_ALL)) {
+        VALUE_SCOPE_CURRENT -> SearchScope.Current
+        VALUE_SCOPE_SELECTED -> SearchScope.Selected
+        else -> SearchScope.All
+    }
+
+    fun setScope(scope: SearchScope) {
+        KV.put(
+            KEY_SEARCH_SCOPE,
+            when (scope) {
+                SearchScope.Current -> VALUE_SCOPE_CURRENT
+                SearchScope.Selected -> VALUE_SCOPE_SELECTED
+                else -> VALUE_SCOPE_ALL
+            },
+        )
+    }
 
     fun isExactMatchEnabled(): Boolean = KV.get(KEY_EXACT_MATCH, false)
 

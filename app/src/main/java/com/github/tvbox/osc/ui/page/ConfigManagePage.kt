@@ -235,7 +235,7 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                                 onClick = { addDialogOpen = true },
                             )
                             TopBarActionBox(
-                                iconRes = R.drawable.ic_script,
+                                iconRes = R.drawable.ic_file_choose,
                                 contentDescription = stringResource(R.string.config_add_local_script),
                                 onClick = { localScriptDialog = true },
                             )
@@ -334,46 +334,6 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                             if (mIsVod) url == activeUrl else !liveFollow && url == liveActiveUrl
                         }
                     }
-                    val cardContent: @Composable (String, Modifier) -> Unit = { value, cardModifier ->
-                        val item = parseSubscribe(value)
-                        val inUse = if (mIsVod) {
-                            item.url == activeUrl || HistoryHelper.isApiLineSourceOf(item.url, activeUrl)
-                        } else {
-                            !liveFollow && (
-                                item.url == liveActiveUrl ||
-                                    HistoryHelper.isLiveApiLineSourceOf(item.url, liveActiveUrl)
-                                )
-                        }
-                        SubscribeCard(
-                            modifier = cardModifier,
-                            item = item,
-                            active = inUse,
-                            disabled = item.url in disabledUrls,
-                            manageMode = manageMode,
-                            selected = value in selected,
-                            onClick = {
-                                if (manageMode) {
-                                    vm.toggleSelected(value)
-                                } else {
-                                    vm.requestSwitch(item, mIsVod)
-                                }
-                            },
-                            onLongClick = {
-                                if (!manageMode && LocalScriptSource.isLocalScript(item.url)) {
-                                    siteManageDir = LocalScriptSource.path(item.url)
-                                } else {
-                                    vm.longPressSelect(value)
-                                }
-                            },
-                            onCheckedChange = { checked ->
-                                if (checked) {
-                                    vm.requestSwitch(item, mIsVod)
-                                } else if (!mIsVod) {
-                                    vm.followLiveNow()
-                                }
-                            },
-                        )
-                    }
                     LazyColumn(
                         state = rememberLazyListState(),
                         modifier = Modifier
@@ -401,7 +361,46 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                                 )
                             }
                         }
-                        items(mOrdered, key = { "${m.name}#$it" }) { value -> cardContent(value, Modifier.animateItem()) }
+                        items(mOrdered, key = { "${m.name}#$it" }) { value ->
+                            val item = parseSubscribe(value)
+                            val inUse = if (mIsVod) {
+                                item.url == activeUrl || HistoryHelper.isApiLineSourceOf(item.url, activeUrl)
+                            } else {
+                                !liveFollow && (
+                                    item.url == liveActiveUrl ||
+                                        HistoryHelper.isLiveApiLineSourceOf(item.url, liveActiveUrl)
+                                    )
+                            }
+                            SubscribeCard(
+                                modifier = Modifier.animateItem(),
+                                item = item,
+                                active = inUse,
+                                disabled = item.url in disabledUrls,
+                                manageMode = manageMode,
+                                selected = value in selected,
+                                onClick = {
+                                    if (manageMode) {
+                                        vm.toggleSelected(value)
+                                    } else {
+                                        vm.requestSwitch(item, mIsVod)
+                                    }
+                                },
+                                onLongClick = {
+                                    if (!manageMode && LocalScriptSource.isLocalScript(item.url)) {
+                                        siteManageDir = LocalScriptSource.path(item.url)
+                                    } else {
+                                        vm.longPressSelect(value)
+                                    }
+                                },
+                                onCheckedChange = { checked ->
+                                    if (checked) {
+                                        vm.requestSwitch(item, mIsVod)
+                                    } else if (!mIsVod) {
+                                        vm.followLiveNow()
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -410,22 +409,21 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
 
     val editing = editTarget
     if (localScriptDialog) {
-        AddScriptDialog(
+        TextEditDialog(
             title = stringResource(R.string.config_add_local_script),
+            initialText = "",
             onDismiss = { localScriptDialog = false },
-            onSave = { name, path ->
+            onConfirm = { text ->
                 localScriptDialog = false
+                val path = text.trim()
                 if (path.isNotEmpty()) {
                     val count = LocalScriptSource.count(path)
                     if (count <= 0) {
                         Toast.makeText(context, context.getString(R.string.toast_local_script_empty), Toast.LENGTH_LONG).show()
-                    } else if (vm.addLocalSource(name.ifBlank { File(path).name }, LocalScriptSource.SCHEME + path)) {
+                    } else if (vm.addLocalSource(File(path).name, LocalScriptSource.SCHEME + path)) {
                         Toast.makeText(context, context.getString(R.string.toast_local_script_added, count), Toast.LENGTH_LONG).show()
                     }
                 }
-            },
-            onPickFolder = { onPicked ->
-                (context as? ConfigManageActivity)?.launchFolderPick { picked -> onPicked(picked) }
             },
         )
     }
@@ -663,85 +661,6 @@ private fun DisabledSourceTag() {
 }
 
 @Composable
-private fun AddScriptDialog(
-    title: String,
-    onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit,
-    onPickFolder: (onPicked: (path: String) -> Unit) -> Unit,
-) {
-    var name by remember { mutableStateOf("") }
-    var path by remember { mutableStateOf("") }
-    AVBoxAlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = title,
-                    modifier = Modifier.weight(1f),
-                )
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .glassSurface(CircleShape, MaterialTheme.colorScheme.surfaceBright)
-                        .clickable {
-                            onPickFolder { picked ->
-                                path = picked
-                                if (name.isBlank()) name = File(picked).name
-                            }
-                        },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_file_choose),
-                        contentDescription = stringResource(R.string.config_pick_local),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-            }
-        },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                OutlinedTextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.config_field_name)) },
-                )
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = path,
-                    onValueChange = { path = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    label = { Text(stringResource(R.string.config_field_path)) },
-                    supportingText = {
-                        Text(stringResource(R.string.config_script_path_hint))
-                    },
-                )
-            }
-        },
-        confirmButton = {
-            val dismissThen = LocalSheetDismissThen.current
-            TextButton(
-                onClick = { dismissThen { onSave(name.trim(), path.trim()) } },
-                enabled = path.isNotBlank(),
-            ) { Text(stringResource(R.string.common_save)) }
-        },
-        dismissButton = {
-            val dismissThen = LocalSheetDismissThen.current
-            TextButton(onClick = { dismissThen { onDismiss() } }) {
-                Text(stringResource(R.string.common_cancel))
-            }
-        },
-    )
-}
-
-@Composable
 private fun AddSubscribeDialog(
     title: String,
     urlSupportingText: String,
@@ -822,12 +741,6 @@ private fun AddSubscribeDialog(
                 onClick = { dismissThen { onSave(name.trim(), url.trim()) } },
                 enabled = url.isNotBlank(),
             ) { Text(stringResource(R.string.common_save)) }
-        },
-        dismissButton = {
-            val dismissThen = LocalSheetDismissThen.current
-            TextButton(onClick = { dismissThen { onDismiss() } }) {
-                Text(stringResource(R.string.common_cancel))
-            }
         },
     )
 }
