@@ -84,6 +84,7 @@ fun SiteManageScreen(
     var reload by remember(dir) { mutableStateOf(0) }
     var filter by remember { mutableStateOf(SiteKind.ALL) }
     var addOpen by remember { mutableStateOf(false) }
+    var editKey by remember { mutableStateOf<String?>(null) }
     val keepSel = remember { mutableStateListOf<String>() }
     val goneSel = remember { mutableStateListOf<String>() }
 
@@ -93,6 +94,11 @@ fun SiteManageScreen(
 
     val visibleSites = sites.filter { filter == SiteKind.ALL || siteKindOf(it.api()) == filter }
     val visibleBac = bac.filter { filter == SiteKind.ALL || siteKindOf(it.api()) == filter }
+
+    val editItem = remember(editKey, reload) {
+        val k = editKey ?: return@remember null
+        (sites + bac).firstOrNull { it.key() == k }
+    }
 
     val refresh: () -> Unit = {
         reload++
@@ -218,6 +224,7 @@ fun SiteManageScreen(
                         list = visibleSites,
                         selected = keepSel,
                         onToggle = { k -> if (keepSel.contains(k)) keepSel.remove(k) else keepSel.add(k) },
+                        onEdit = { editKey = it },
                     )
                     SiteColumn(
                         modifier = Modifier.weight(1f),
@@ -225,6 +232,7 @@ fun SiteManageScreen(
                         list = visibleBac,
                         selected = goneSel,
                         onToggle = { k -> if (goneSel.contains(k)) goneSel.remove(k) else goneSel.add(k) },
+                        onEdit = { editKey = it },
                     )
                 }
             } else {
@@ -238,6 +246,7 @@ fun SiteManageScreen(
                         list = visibleSites,
                         selected = keepSel,
                         onToggle = { k -> if (keepSel.contains(k)) keepSel.remove(k) else keepSel.add(k) },
+                        onEdit = { editKey = it },
                     )
                     SiteColumn(
                         modifier = Modifier.weight(1f),
@@ -245,10 +254,23 @@ fun SiteManageScreen(
                         list = visibleBac,
                         selected = goneSel,
                         onToggle = { k -> if (goneSel.contains(k)) goneSel.remove(k) else goneSel.add(k) },
+                        onEdit = { editKey = it },
                     )
                 }
             }
         }
+    }
+
+    if (editKey != null && editItem != null) {
+        EditSiteDialog(
+            item = editItem,
+            onDismiss = { editKey = null },
+            onSave = { name, ext, proxy ->
+                val k = editKey
+                editKey = null
+                if (k != null && LocalScriptSource.updateSite(dir, k, name, ext, proxy)) refresh()
+            },
+        )
     }
 
     if (addOpen) {
@@ -260,6 +282,56 @@ fun SiteManageScreen(
             },
         )
     }
+}
+
+@Composable
+private fun EditSiteDialog(
+    item: JSONObject?,
+    onDismiss: () -> Unit,
+    onSave: (String, String, String) -> Unit,
+) {
+    var name by remember(item) { mutableStateOf(item?.name().orEmpty()) }
+    var ext by remember(item) { mutableStateOf(item?.optString("ext").orEmpty()) }
+    var proxy by remember(item) { mutableStateOf(item?.optString("proxy").orEmpty()) }
+    AVBoxAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("编辑站点") },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text("名称") },
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = ext,
+                    onValueChange = { ext = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text("扩展参数 ext") },
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = proxy,
+                    onValueChange = { proxy = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text("代理（留空=不代理）") },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(name.trim(), ext.trim(), proxy.trim()) }, enabled = name.isNotBlank()) {
+                Text("保存")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        },
+    )
 }
 
 @Composable
@@ -338,6 +410,7 @@ private fun SiteColumn(
     list: List<JSONObject>,
     selected: MutableList<String>,
     onToggle: (String) -> Unit,
+    onEdit: ((String) -> Unit)? = null,
 ) {
     Column(modifier.fillMaxSize()) {
         Text(
@@ -359,6 +432,7 @@ private fun SiteColumn(
                     dotOnLeft = true,
                     shape = SiteCardShapeSingle,
                     onClick = { onToggle(item.key()) },
+                    onLongClick = onEdit?.let { cb -> { cb(item.key()) } },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
