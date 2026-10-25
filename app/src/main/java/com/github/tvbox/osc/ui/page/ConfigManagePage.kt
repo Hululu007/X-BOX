@@ -101,6 +101,7 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
     var addDialogOpen by remember { mutableStateOf(false) }
     var localScriptDialog by remember { mutableStateOf(false) }
     var repoSheetOpen by remember { mutableStateOf(false) }
+    var siteManageDir by rememberSaveable { mutableStateOf<String?>(null) }
     val vodItems by vm.vodItems.collectAsState()
     val liveItems by vm.liveItems.collectAsState()
     val activeUrl by vm.activeUrl.collectAsState()
@@ -153,6 +154,17 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
             noSourceText,
         )
     }
+    val siteDir = siteManageDir
+    if (siteDir != null) {
+        BackHandler { siteManageDir = null }
+        SiteManageScreen(
+            dir = siteDir,
+            onBack = { siteManageDir = null },
+            onReloadSource = { vm.reloadActiveSource(isVod) },
+        )
+        return
+    }
+
     AppTopBarScaffold(
         titleContent = {
             Text(
@@ -347,7 +359,11 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                                 }
                             },
                             onLongClick = {
-                                vm.longPressSelect(value)
+                                if (!manageMode && LocalScriptSource.isLocalScript(item.url)) {
+                                    siteManageDir = LocalScriptSource.path(item.url)
+                                } else {
+                                    vm.longPressSelect(value)
+                                }
                             },
                             onCheckedChange = { checked ->
                                 if (checked) {
