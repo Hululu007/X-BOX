@@ -38,8 +38,14 @@ class HtmlSpider(
         // 无状态：每次调用现起 Activity，不需要预加载
     }
 
-    override fun homeContent(filter: Boolean): String? =
-        call("homeContent", JSONObject().put("filter", filter))
+    /**
+     * 宫格里始终保留一张“启动”卡：html 靠 WebView 跑，页面被误关后首页就空了，
+     * 这张卡是这个站点的常驻入口，点它只重新拉起 html，不做详情页跳转。
+     */
+    override fun homeContent(filter: Boolean): String? {
+        val raw = call("homeContent", JSONObject().put("filter", filter))
+        return withLaunchCard(raw)
+    }
 
     override fun homeVideoContent(): String? =
         call("homeVideoContent", JSONObject())
@@ -63,7 +69,32 @@ class HtmlSpider(
 
     override fun detailContent(ids: List<String>?): String? {
         val list: List<String> = ids ?: emptyList()
+        // 点“启动”卡 = 二次拉起 html，不进详情页
+        if (list.isNotEmpty() && list[0] == LAUNCH_ID) {
+            call("homeContent", JSONObject().put("filter", true))
+            return JSONObject().put("list", org.json.JSONArray()).toString()
+        }
         return call("detailContent", JSONObject().put("ids", org.json.JSONArray(list)))
+    }
+
+    /** 把启动卡挂到宫格末尾：真实内容在前，入口永远在 */
+    private fun withLaunchCard(raw: String?): String {
+        val base = if (raw.isNullOrBlank()) JSONObject() else try {
+            JSONObject(raw)
+        } catch (th: Throwable) {
+            JSONObject()
+        }
+        if (!base.has("list")) base.put("list", org.json.JSONArray())
+        val arr = base.optJSONArray("list") ?: org.json.JSONArray()
+        arr.put(
+            JSONObject()
+                .put("vod_id", LAUNCH_ID)
+                .put("vod_name", LAUNCH_NAME)
+                .put("vod_pic", "")
+                .put("vod_remarks", "HTML"),
+        )
+        base.put("list", arr)
+        return base.toString()
     }
 
     override fun searchContent(key: String?, quick: Boolean): String? =
@@ -148,5 +179,7 @@ class HtmlSpider(
     private companion object {
         const val TAG = "HtmlSpider"
         const val TIMEOUT_SEC = 30L
+        const val LAUNCH_NAME = "启动脚本"
+        const val LAUNCH_ID = "__html_launch__"
     }
 }
