@@ -127,7 +127,7 @@ class SortLoader(
         }
 
         val type = sourceBean.type
-        if (type == 3) {
+        if (type == 3 || type == 6) {
             getSortFromSpider(sourceKey, sourceBean, withRec)
         } else if (type == 0 || type == 1) {
             getSortFromApi(sourceKey, sourceBean, withRec)
