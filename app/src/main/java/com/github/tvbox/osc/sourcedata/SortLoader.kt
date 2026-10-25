@@ -42,6 +42,8 @@ class SortLoader(
             synchronized(sortCache) {
                 sortCache[sourceKey] = sortXml
             }
+            // 落到磁盘，供下次冷启动/切源时先渲染出首屏
+            SortDiskCache.save(SortDiskCache.keyOf(sourceKey), sortXml)
         }
     }
 
@@ -123,6 +125,17 @@ class SortLoader(
                     postSortResult(sourceKey, cached)
                     return
                 }
+            }
+
+            // 内存没命中（冷启动 / 刚切订阅源）：先用磁盘快照把首屏铺出来，
+            // 再继续往下走真实请求，拿到后覆盖。注意这里不写回内存缓存，
+            // 否则后续 getSort 会一直命中快照、永远不刷新。
+            val snapshot = withContext(Dispatchers.IO) {
+                SortDiskCache.load(SortDiskCache.keyOf(sourceKey))
+            }
+            if (snapshot != null && !snapshot.videoList.isNullOrEmpty()) {
+                attachSortSource(sourceKey, snapshot)
+                postSortResult(sourceKey, snapshot)
             }
         }
 
