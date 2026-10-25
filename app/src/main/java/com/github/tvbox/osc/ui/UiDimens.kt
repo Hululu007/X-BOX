@@ -38,6 +38,19 @@ object UiDimens {
         else -> 0.72f
     }
 
+    /**
+     * 订阅源弹窗占屏幕高度的固定比例。
+     *
+     * 用单一固定值、不按屏幕分档：窗口大小只跟屏幕走，
+     * 不随站点数量变化——站点大量减少时窗口不会再停在刷新前的高度。
+     */
+    @JvmStatic
+    fun sheetFixedFraction(): Float = 0.72f
+
+    /** 列表区表格纹理的格子边长：随全局缩放走，保证不同屏幕下纹理疏密一致。 */
+    @JvmStatic
+    fun tableCellDp(scale: Float): Dp = (30f * scale).dp
+
     /** 弹窗内列表的最大高度：随屏幕高度走，不再写死 420dp。 */
     @JvmStatic
     fun sheetListMaxHeightDp(heightDp: Int): Dp {
