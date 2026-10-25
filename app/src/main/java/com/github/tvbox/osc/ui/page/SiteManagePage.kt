@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Checkbox
@@ -203,25 +204,49 @@ fun SiteManageScreen(
                 }
             }
 
-            // 左右两栏
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                SiteColumn(
-                    modifier = Modifier.weight(1f),
-                    title = "工作区 (${visibleSites.size})",
-                    list = visibleSites,
-                    selected = keepSel,
-                    onToggle = { k -> if (keepSel.contains(k)) keepSel.remove(k) else keepSel.add(k) },
-                )
-                SiteColumn(
-                    modifier = Modifier.weight(1f),
-                    title = "回收站 (${visibleBac.size})",
-                    list = visibleBac,
-                    selected = goneSel,
-                    onToggle = { k -> if (goneSel.contains(k)) goneSel.remove(k) else goneSel.add(k) },
-                )
+            // 双栏：宽屏左右并排，窄屏自动改为上下排列，
+            // 否则手机上每栏只有半个屏宽，站点名会被截断得看不清。
+            val wideScreen = LocalConfiguration.current.screenWidthDp >= 600
+            if (wideScreen) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    SiteColumn(
+                        modifier = Modifier.weight(1f),
+                        title = "工作区 (${visibleSites.size})",
+                        list = visibleSites,
+                        selected = keepSel,
+                        onToggle = { k -> if (keepSel.contains(k)) keepSel.remove(k) else keepSel.add(k) },
+                    )
+                    SiteColumn(
+                        modifier = Modifier.weight(1f),
+                        title = "回收站 (${visibleBac.size})",
+                        list = visibleBac,
+                        selected = goneSel,
+                        onToggle = { k -> if (goneSel.contains(k)) goneSel.remove(k) else goneSel.add(k) },
+                    )
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    SiteColumn(
+                        modifier = Modifier.weight(1f),
+                        title = "工作区 (${visibleSites.size})",
+                        list = visibleSites,
+                        selected = keepSel,
+                        onToggle = { k -> if (keepSel.contains(k)) keepSel.remove(k) else keepSel.add(k) },
+                    )
+                    SiteColumn(
+                        modifier = Modifier.weight(1f),
+                        title = "回收站 (${visibleBac.size})",
+                        list = visibleBac,
+                        selected = goneSel,
+                        onToggle = { k -> if (goneSel.contains(k)) goneSel.remove(k) else goneSel.add(k) },
+                    )
+                }
             }
         }
     }
