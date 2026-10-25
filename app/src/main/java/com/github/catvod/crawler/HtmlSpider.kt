@@ -92,7 +92,7 @@ class HtmlSpider(
             val code = o.optInt("code", 200)
             val type = o.optString("type", "application/octet-stream")
             val body = o.optString("body", "")
-            arrayOf(code, type, body.toByteArray())
+            arrayOf<Any?>(code, type, body.toByteArray())
         } catch (th: Throwable) {
             LOG.e(TAG, th)
             null
