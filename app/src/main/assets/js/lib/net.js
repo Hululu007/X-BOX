@@ -133,6 +133,15 @@
         if (slot) { slot.cancelled = true; delete timerMap[id]; }
     };
 
+    // requestAnimationFrame：脚本里偶有用到，QuickJS 没有，退化为定时器实现
+    defineIfMissing('requestAnimationFrame', function (fn) {
+        if (typeof fn !== 'function') return 0;
+        return globalThis.setTimeout(function () { fn(Date.now()); }, 16);
+    });
+    defineIfMissing('cancelAnimationFrame', function (id) {
+        try { globalThis.clearTimeout(id); } catch (e) {}
+    });
+
     defineIfMissing('console', {});
     try {
         if (typeof globalThis.console.log !== 'function') globalThis.console.log = function () {};
