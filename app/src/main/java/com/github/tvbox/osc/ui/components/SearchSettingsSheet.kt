@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -41,25 +43,12 @@ import com.github.tvbox.osc.bean.SourceBean
 import com.github.tvbox.osc.net.SearchSettings
 import com.github.tvbox.osc.util.HomeSettings
 
-val SourceCardShapeLeft = RoundedCornerShape(
-    topStart = 28.dp,
-    bottomStart = 28.dp,
-    topEnd = 4.dp,
-    bottomEnd = 4.dp,
-)
-
-val SourceCardShapeRight = RoundedCornerShape(
-    topStart = 4.dp,
-    bottomStart = 4.dp,
-    topEnd = 28.dp,
-    bottomEnd = 28.dp,
-)
-
-private val ExactCardShape = RoundedCornerShape(28.dp)
-
 @Composable
 fun SearchSettingsSheet(onDismiss: () -> Unit, onSelectionChanged: () -> Unit) {
-    val sources = remember { ApiConfig.get().getSourceBeanList().filter(SourceBean::isSearchable) }
+    var reloadTick by remember { mutableStateOf(0) }
+    var kind by remember { mutableStateOf(SiteKind.ALL) }
+    val sources = remember(reloadTick) { ApiConfig.get().getSourceBeanList().filter(SourceBean::isSearchable) }
+    val visible = remember(sources, kind) { sources.filter { kind == SiteKind.ALL || siteKindOf(it.api) == kind } }
     val allKeys = remember(sources) { sources.map { it.key.orEmpty() }.toSet() }
     val homeLayout by HomeSettings.layoutFlow.collectAsStateWithLifecycle()
     var exactMatch by remember { mutableStateOf(SearchSettings.isExactMatchEnabled()) }
@@ -123,7 +112,7 @@ fun SearchSettingsSheet(onDismiss: () -> Unit, onSelectionChanged: () -> Unit) {
                 SettingsCard(
                     position = SettingsCardPosition.SINGLE,
                     color = MaterialTheme.colorScheme.surfaceBright,
-                    shape = ExactCardShape,
+                    shape = SiteCardShapeSingle,
                 ) {
                     SettingsSwitchRow(
                         title = stringResource(R.string.search_exact),
@@ -135,8 +124,19 @@ fun SearchSettingsSheet(onDismiss: () -> Unit, onSelectionChanged: () -> Unit) {
                     )
                 }
             }
+            CapsuleSegmentedButton(
+                options = SiteKind.values().map { SegmentOption(it.label, it) },
+                selectedValue = kind,
+                onOptionSelected = { kind = it },
+                style = SegmentStyle.Separated,
+                containerColor = MaterialTheme.colorScheme.surfaceBright,
+                pressMorph = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp, bottom = 4.dp),
+            )
             Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -155,10 +155,18 @@ fun SearchSettingsSheet(onDismiss: () -> Unit, onSelectionChanged: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+                IconButton(onClick = { reloadTick++ }) {
+                    Icon(
+                        painter = painterResource(R.drawable.player_ic_menu_refresh),
+                        contentDescription = stringResource(R.string.common_refresh),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
                 TextButton(onClick = { applySelection(allKeys) }) { Text(stringResource(R.string.common_select_all)) }
                 TextButton(onClick = { applySelection(allKeys - selected) }) { Text(stringResource(R.string.common_invert_selection)) }
             }
-            if (sources.isEmpty()) {
+            if (visible.isEmpty()) {
                 Text(
                     text = stringResource(R.string.search_sites_empty),
                     style = MaterialTheme.typography.bodyMedium,
@@ -170,18 +178,18 @@ fun SearchSettingsSheet(onDismiss: () -> Unit, onSelectionChanged: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    sources.chunked(2).forEach { pair ->
+                    visible.chunked(2).forEach { pair ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
                             val left = pair[0]
                             val leftKey = left.key.orEmpty()
-                            SourceCard(
+                            SiteSourceCard(
                                 name = left.name?.takeIf { it.isNotEmpty() } ?: leftKey,
                                 selected = leftKey in selected,
                                 dotOnLeft = true,
-                                shape = SourceCardShapeLeft,
+                                shape = SiteCardShapeLeft,
                                 onClick = {
                                     applySelection(
                                         if (leftKey in selected) selected - leftKey else selected + leftKey,
@@ -192,11 +200,11 @@ fun SearchSettingsSheet(onDismiss: () -> Unit, onSelectionChanged: () -> Unit) {
                             val right = pair.getOrNull(1)
                             if (right != null) {
                                 val rightKey = right.key.orEmpty()
-                                SourceCard(
+                                SiteSourceCard(
                                     name = right.name?.takeIf { it.isNotEmpty() } ?: rightKey,
                                     selected = rightKey in selected,
                                     dotOnLeft = false,
-                                    shape = SourceCardShapeRight,
+                                    shape = SiteCardShapeRight,
                                     onClick = {
                                         applySelection(
                                             if (rightKey in selected) selected - rightKey else selected + rightKey,
@@ -243,57 +251,6 @@ fun SearchActionButton(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-        }
-    }
-}
-
-@Composable
-fun SourceCard(
-    name: String,
-    selected: Boolean,
-    dotOnLeft: Boolean,
-    shape: Shape,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        onClick = onClick,
-        shape = shape,
-        color = MaterialTheme.colorScheme.surfaceBright,
-        modifier = modifier,
-    ) {
-        Box(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = name,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                ),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp),
-            )
-            if (selected) {
-                Box(
-                    modifier = Modifier
-                        .align(if (dotOnLeft) Alignment.CenterStart else Alignment.CenterEnd)
-                        .padding(horizontal = 12.dp)
-                        .size(14.dp)
-                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .background(MaterialTheme.colorScheme.primary, CircleShape),
-                    )
-                }
-            }
         }
     }
 }
