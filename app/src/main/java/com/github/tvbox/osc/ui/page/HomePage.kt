@@ -63,6 +63,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -105,6 +106,7 @@ import com.github.tvbox.osc.ui.components.HomeBackdrop
 import com.github.tvbox.osc.ui.components.HomeHeroBackdrop
 import com.github.tvbox.osc.ui.components.LoadState
 import com.github.tvbox.osc.ui.components.homeHeroBackdropSupported
+import com.github.tvbox.osc.ui.UiDimens
 import com.github.tvbox.osc.ui.components.LoadStateBox
 import com.github.tvbox.osc.ui.components.LocalSheetDismiss
 import com.github.tvbox.osc.ui.components.SearchField
@@ -533,7 +535,9 @@ fun HomePage(
     if (showSourceSheet) {
         AVBoxBottomSheet(
             onDismissRequest = { showSourceSheet = false },
-            modifier = Modifier.heightIn(max = (screenHeightDp * 0.9f).dp),
+            modifier = Modifier.heightIn(
+                max = (screenHeightDp * UiDimens.sheetHeightFraction(screenHeightDp)).dp,
+            ),
             title = stringResource(R.string.home_subscription_source),
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             isScrollable = false,
@@ -634,78 +638,83 @@ fun HomePage(
                     )
                 }
             }
+            val listMaxHeight = UiDimens.sheetListMaxHeightDp(screenHeightDp)
             val listModifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 420.dp)
+                .heightIn(max = listMaxHeight)
                 .clearFocusOnDrag(focusManager)
                 .pointerInput(focusManager) {
                     detectTapGestures(onTap = { focusManager.clearFocus() })
                 }
-            LazyColumn(
-                state = listState,
-                modifier = listModifier,
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                if (visible.isEmpty()) {
-                    item {
-                        LoadStateBox(
-                            state = LoadState.Empty,
-                            emptyText = stringResource(
-                                if (query.isEmpty()) R.string.config_empty_subscribe else R.string.home_site_search_empty,
-                            ),
-                            errorText = "",
-                            retryText = "",
-                            emptyIconRes = R.drawable.ic_empty_record,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(160.dp),
-                        )
-                    }
-                }
-                items(visible.chunked(perRow)) { row ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        row.forEachIndexed { index, bean ->
-                            val selected = bean.key == currentSource?.key
-                            SiteSourceCard(
-                                name = bean.name?.takeIf { it.isNotEmpty() } ?: bean.key.orEmpty(),
-                                selected = selected,
-                                dotOnLeft = index == 0,
-                                shape = if (perRow == 2) {
-                                    if (index == 0) SiteCardShapeLeft else SiteCardShapeRight
-                                } else {
-                                    SiteCardShapeSingle
-                                },
-                                onClick = {
-                                    if (!selected) {
-                                        vm.switchSource(bean)
-                                    }
-                                    dismissAnimated()
-                                },
-                                modifier = Modifier.weight(1f),
+            // 站点数变化后强制重建列表：否则列表高度会停在刷新前的尺寸，
+            // 站点大量减少时弹窗下方会留下一片空白。
+            key(visible.size, perRow) {
+                    LazyColumn(
+                    state = listState,
+                    modifier = listModifier,
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    if (visible.isEmpty()) {
+                        item {
+                            LoadStateBox(
+                                state = LoadState.Empty,
+                                emptyText = stringResource(
+                                    if (query.isEmpty()) R.string.config_empty_subscribe else R.string.home_site_search_empty,
+                                ),
+                                errorText = "",
+                                retryText = "",
+                                emptyIconRes = R.drawable.ic_empty_record,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(160.dp),
                             )
                         }
-                        if (row.size < perRow) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
                     }
-                }
-                item {
-                    SettingsGroup(title = null, modifier = Modifier.padding(top = 20.dp)) {
-                        SettingsCard(
-                            position = SettingsCardPosition.SINGLE,
-                            color = MaterialTheme.colorScheme.surfaceBright,
+                    items(visible.chunked(perRow)) { row ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
                         ) {
-                            SettingsRow(
-                                title = stringResource(R.string.settings_config_manage),
-                                onClick = {
-                                    dismissAnimated()
-                                    ConfigManageActivity.start(context)
-                                },
-                            )
+                            row.forEachIndexed { index, bean ->
+                                val selected = bean.key == currentSource?.key
+                                SiteSourceCard(
+                                    name = bean.name?.takeIf { it.isNotEmpty() } ?: bean.key.orEmpty(),
+                                    selected = selected,
+                                    dotOnLeft = index == 0,
+                                    shape = if (perRow == 2) {
+                                        if (index == 0) SiteCardShapeLeft else SiteCardShapeRight
+                                    } else {
+                                        SiteCardShapeSingle
+                                    },
+                                    onClick = {
+                                        if (!selected) {
+                                            vm.switchSource(bean)
+                                        }
+                                        dismissAnimated()
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            if (row.size < perRow) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                    item {
+                        SettingsGroup(title = null, modifier = Modifier.padding(top = 20.dp)) {
+                            SettingsCard(
+                                position = SettingsCardPosition.SINGLE,
+                                color = MaterialTheme.colorScheme.surfaceBright,
+                            ) {
+                                SettingsRow(
+                                    title = stringResource(R.string.settings_config_manage),
+                                    onClick = {
+                                        dismissAnimated()
+                                        ConfigManageActivity.start(context)
+                                    },
+                                )
+                            }
                         }
                     }
                 }
