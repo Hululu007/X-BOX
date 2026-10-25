@@ -434,3 +434,242 @@
         return result;
     };
 })();
+
+/* ===== 兼容层：影视TV / TVBox / FongMi 系脚本常用运行时 ===== */
+(function () {
+    var g = globalThis;
+
+    if (typeof g.console === "undefined" || g.console === null) {
+        g.console = {};
+    }
+    ["log", "info", "warn", "error", "debug"].forEach(function (key) {
+        if (typeof g.console[key] !== "function") {
+            g.console[key] = function () {};
+        }
+    });
+
+    var timers = {};
+    var seq = 1;
+    var nativeTimeout = typeof g.setTimeout === "function" ? g.setTimeout : function (fn) { fn(); };
+    g.setTimeout = function (fn, delay) {
+        var id = seq++;
+        timers[id] = true;
+        nativeTimeout(function () {
+            if (!timers[id]) return;
+            delete timers[id];
+            try { fn(); } catch (e) {}
+        }, delay || 0);
+        return id;
+    };
+    g.clearTimeout = function (id) { delete timers[id]; };
+    g.setInterval = function (fn, delay) {
+        var id = seq++;
+        timers[id] = true;
+        function step() {
+            if (!timers[id]) return;
+            try { fn(); } catch (e) {}
+            nativeTimeout(step, delay || 0);
+        }
+        nativeTimeout(step, delay || 0);
+        return id;
+    };
+    g.clearInterval = function (id) { delete timers[id]; };
+
+    g.alert = function (msg) {
+        try { g.console.log(String(msg)); } catch (e) {}
+    };
+
+    var B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    function utf8Bytes(s) {
+        var str = String(s), out = [], i, c;
+        for (i = 0; i < str.length; i++) {
+            c = str.charCodeAt(i);
+            if (c < 0x80) {
+                out.push(c);
+            } else if (c < 0x800) {
+                out.push(0xC0 | (c >> 6), 0x80 | (c & 63));
+            } else {
+                out.push(0xE0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+            }
+        }
+        return out;
+    }
+    function bytesUtf8(bytes) {
+        var s = "", i = 0, b, b2, b3;
+        while (i < bytes.length) {
+            b = bytes[i++];
+            if (b < 0x80) {
+                s += String.fromCharCode(b);
+            } else if (b < 0xE0) {
+                s += String.fromCharCode(((b & 31) << 6) | (bytes[i++] & 63));
+            } else {
+                b2 = bytes[i++];
+                b3 = bytes[i++];
+                s += String.fromCharCode(((b & 15) << 12) | ((b2 & 63) << 6) | (b3 & 63));
+            }
+        }
+        return s;
+    }
+    function bytesToB64(bytes) {
+        var out = "", i, b0, b1, b2;
+        for (i = 0; i < bytes.length; i += 3) {
+            b0 = bytes[i];
+            b1 = bytes[i + 1];
+            b2 = bytes[i + 2];
+            out += B64[b0 >> 2];
+            out += B64[((b0 & 3) << 4) | ((b1 === undefined ? 0 : b1) >> 4)];
+            out += b1 === undefined ? "=" : B64[((b1 & 15) << 2) | ((b2 === undefined ? 0 : b2) >> 6)];
+            out += b2 === undefined ? "=" : B64[b2 & 63];
+        }
+        return out;
+    }
+    function b64ToBytes(text) {
+        var s = String(text).replace(/[^A-Za-z0-9+/=]/g, ""), bytes = [], i, c0, c1, c2, c3;
+        for (i = 0; i < s.length; i += 4) {
+            c0 = B64.indexOf(s[i]);
+            c1 = B64.indexOf(s[i + 1]);
+            c2 = B64.indexOf(s[i + 2]);
+            c3 = B64.indexOf(s[i + 3]);
+            if (c0 < 0 || c1 < 0) break;
+            bytes.push((c0 << 2) | (c1 >> 4));
+            if (c2 >= 0) bytes.push(((c1 & 15) << 4) | (c2 >> 2));
+            if (c3 >= 0) bytes.push(((c2 & 3) << 6) | c3);
+        }
+        return bytes;
+    }
+    g.btoa = function (text) { return bytesToB64(utf8Bytes(text)); };
+    g.atob = function (text) { return bytesUtf8(b64ToBytes(text)); };
+    g.base64X = g.btoa;
+    if (typeof g.base64Encode !== "function") g.base64Encode = g.btoa;
+    if (typeof g.base64Decode !== "function") g.base64Decode = g.atob;
+
+    if (typeof g.local !== "undefined" && g.local !== null) {
+        var store = {
+            getItem: function (key) {
+                try { return g.local.get("localStorage", String(key)); } catch (e) { return ""; }
+            },
+            setItem: function (key, value) {
+                try { g.local.set("localStorage", String(key), String(value)); } catch (e) {}
+            },
+            removeItem: function (key) {
+                try { g.local.delete("localStorage", String(key)); } catch (e) {}
+            },
+            clear: function () {}
+        };
+        store.get = store.getItem;
+        store.set = store.setItem;
+        store.delete = store.removeItem;
+        g.localStorage = store;
+    }
+
+    g.fetch = function (url, options) {
+        return new Promise(function (resolve) {
+            var opt = options || {};
+            var req = {
+                method: (opt.method || "GET").toUpperCase(),
+                headers: opt.headers || {},
+                buffer: 0,
+                complete: function (res) {
+                    var content = res && res.content !== undefined ? String(res.content) : "";
+                    resolve({
+                        ok: !!(res && res.code >= 200 && res.code < 300),
+                        status: res ? res.code : 0,
+                        headers: (res && res.headers) || {},
+                        url: url,
+                        text: function () { return Promise.resolve(content); },
+                        json: function () {
+                            try { return Promise.resolve(JSON.parse(content)); }
+                            catch (e) { return Promise.reject(e); }
+                        }
+                    });
+                }
+            };
+            if (opt.body !== undefined) req.body = opt.body;
+            else if (opt.data !== undefined) req.data = opt.data;
+            try { g._http(url, req); } catch (e) { req.complete(null); }
+        });
+    };
+
+    function splitArgs(a, b, c) {
+        var params = null, headers = null, options = {};
+        [a, b, c].forEach(function (arg) {
+            if (arg === undefined || arg === null) return;
+            if (typeof arg === "string") {
+                if (params === null) params = arg;
+                return;
+            }
+            if (typeof arg === "object") {
+                if (arg.method || arg.body !== undefined || arg.data !== undefined ||
+                    arg.headers || arg.async !== undefined || arg.timeout !== undefined ||
+                    arg.redirect !== undefined || arg.buffer !== undefined) {
+                    Object.assign(options, arg);
+                } else if (headers === null) {
+                    headers = arg;
+                } else if (params === null) {
+                    params = arg;
+                }
+            }
+        });
+        return { params: params, headers: headers, options: options };
+    }
+
+    function requestSync(method, url, a, b, c) {
+        var split = splitArgs(a, b, c);
+        var opt = Object.assign({}, split.options);
+        opt.method = method;
+        if (split.headers) opt.headers = split.headers;
+        if (split.params) {
+            if (method === "POST") opt.data = split.params;
+            else opt.params = split.params;
+        }
+        try {
+            var res = g._http(url, opt);
+            if (!res) return "";
+            if (typeof res === "string") return res;
+            var content = res.content !== undefined ? res.content : (res.body !== undefined ? res.body : "");
+            return content === null || content === undefined ? "" : String(content);
+        } catch (e) {
+            return "";
+        }
+    }
+
+    if (typeof g.http === "function") {
+        g.http.get = function (url, a, b, c) { return requestSync("GET", url, a, b, c); };
+        g.http.post = function (url, a, b, c) { return requestSync("POST", url, a, b, c); };
+        g.http.getResponseCode = function (url, a, b) {
+            var split = splitArgs(a, b, null);
+            var opt = Object.assign({ method: "GET", redirect: 0 }, split.options);
+            if (split.headers) opt.headers = split.headers;
+            try {
+                var res = g._http(url, opt);
+                return res && res.code ? Number(res.code) : -1;
+            } catch (e) {
+                return -1;
+            }
+        };
+        g.http.getHeaderForLocation = function (url, a, b) {
+            var split = splitArgs(a, b, null);
+            var opt = Object.assign({ method: "GET", redirect: 0 }, split.options);
+            if (split.headers) opt.headers = split.headers;
+            try {
+                var res = g._http(url, opt);
+                if (!res || !res.headers) return "";
+                var headers = res.headers || {};
+                return headers.location || headers.Location || "";
+            } catch (e) {
+                return "";
+            }
+        };
+        g.http.toBytes = function (url, a, b) {
+            var split = splitArgs(a, b, null);
+            var opt = Object.assign({ method: "GET", buffer: 1 }, split.options);
+            if (split.headers) opt.headers = split.headers;
+            try {
+                var res = g._http(url, opt);
+                return (res && res.content) || [];
+            } catch (e) {
+                return [];
+            }
+        };
+    }
+})();
