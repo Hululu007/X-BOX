@@ -640,6 +640,7 @@
     <string name="toast_proxy_on">Proxy enabled</string>
     <string name="toast_proxy_off">Proxy disabled</string>
     <string name="config_add_local_script">Add local script folder</string>
+    <string name="config_site_manage">Site manage</string>
     <string name="config_local_script_hint">Folder containing py/js scripts</string>
     <string name="toast_local_script_empty">No py/js script found</string>
     <string name="toast_local_script_added">Added, %1$d scripts</string>
