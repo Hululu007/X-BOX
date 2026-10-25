@@ -882,4 +882,220 @@
             }
         };
     }
+
+    // ------------------------------------------------------------------
+    // appmenu T4 兼容层（反向构造）
+    // 仅补齐 X-BOX 缺少的全局对象/函数，绝不覆盖已有的 Java 实现：
+    // pdfh/pd/pdfa/pdfla/md5X/base64*/aesX/rsaX/s2t/t2s/joinUrl/getProxy
+    // 这几个 X-BOX 由 Java 侧提供，功能和正确性与 CatVod 一致，优先保留。
+    // ------------------------------------------------------------------
+    (function () {
+        var g = globalThis;
+        var keep = {};
+        var names = ["pdfh", "pd", "pdfl", "pdfa", "pj", "pjfa", "pf"];
+        for (var i = 0; i < names.length; i++) {
+            if (typeof g[names[i]] === "function") keep[names[i]] = g[names[i]];
+        }
+        try {
+var VOID={br:1,img:1,input:1,meta:1,link:1,hr:1,source:1,area:1,base:1,col:1,embed:1,param:1,track:1,wbr:1};
+function __attrs(s){var o={},r=/([A-Za-z_:][-A-Za-z0-9_:.]*)\s*=\s*(["'])([\s\S]*?)\2/g,m;
+ while((m=r.exec(s))){o[m[1].toLowerCase()]=m[3]}
+ r=/([A-Za-z_:][-A-Za-z0-9_:.]*)(?=\s|$|\/)/g;
+ while((m=r.exec(s))){if(!(m[1].toLowerCase() in o))o[m[1].toLowerCase()]=''}
+ return o}
+function __parse(h){var n=[],st=[],re=/<(\/?)([A-Za-z][A-Za-z0-9]*)([^>]*?)(\/?)>/g,m,last=0;
+ while((m=re.exec(h))){var tag=m[2].toLowerCase(),close=m[1]==='/',self=m[4]==='/';
+  if(close){for(var i=st.length-1;i>=0;i--){if(st[i].tag===tag){st[i].e=m.index+m[0].length;st.splice(i,1);break}}}
+  else{var e={tag:tag,attrs:__attrs(m[3]||''),s:m.index,e:h.length,kids:[],parent:null,inner:'',text:'',html:''};
+   if(st.length){var p=st[st.length-1];e.parent=p;p.kids.push(e)}
+   if(!self&&!VOID[tag])st.push(e);else e.e=m.index+m[0].length;
+   n.push(e)}}
+ for(var j=0;j<n.length;j++){var x=n[j];
+  if(x.e===undefined||x.e>x.s){var inner=x.inner!==undefined?x.inner:''}
+  x.html=(x.e&&x.e>x.s)?h.substring(x.s,x.e):'';
+  x.text=x.html.replace(/<[\s\S]*?>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&')}
+ return n}
+function J(list){this.list=list||[];this.length=this.list.length}
+J.prototype.size=function(){return this.list.length};
+J.prototype.eq=function(i){return new J([this.list[i]])};
+J.prototype.first=function(){return this.eq(0)};
+J.prototype.last=function(){return this.eq(this.list.length-1)};
+J.prototype.each=function(f){for(var i=0;i<this.list.length;i++){try{f.call(this.list[i],i,this.list[i])}catch(e){}}return this};
+J.prototype.map=function(f){var o=[];for(var i=0;i<this.list.length;i++){try{o.push(f.call(this.list[i],i,this.list[i]))}catch(e){}}return o};
+J.prototype.text=function(){var t='';for(var i=0;i<this.list.length;i++){t+=this.list[i].text||''}return t};
+J.prototype.html=function(){var t='';for(var i=0;i<this.list.length;i++){t+=this.list[i].html||''}return t};
+J.prototype.attr=function(k){if(!this.list.length)return '';
+ var v=this.list[0].attrs[k.toLowerCase()];return v===undefined?'':v};
+J.prototype.find=function(sel){var o=[];
+ var ps=String(sel||'').split(',');
+ for(var p=0;p<ps.length;p++){var parts=ps[p].trim().split(/\s+/);
+  if(!parts.length)continue;
+  var last=parts[parts.length-1],cur=this.list;
+  for(var q=0;q<parts.length-1;q++){var nx=[];
+   for(var i=0;i<cur.length;i++){var d=__desc(cur[i],parts[q]);nx=nx.concat(d)}
+   cur=nx}
+  for(var i=0;i<cur.length;i++){var d=__desc(cur[i],last);o=o.concat(d)}}
+ return new J(o)};
+function __desc(node,sel){var out=[];
+ var m=/^([A-Za-z][A-Za-z0-9]*)?((?:[.#][-\w]+)*)$/.exec(sel.trim());
+ if(!m)return out;
+ var tag=(m[1]||'').toLowerCase(),rest=m[2]||'';
+ var cls=[],id='';
+ var rr=/([.#])([-\w]+)/g,x;
+ while((x=rr.exec(rest))){if(x[1]==='.')cls.push(x[2]);else id=x[2]}
+ var kids=node.kids||[];
+ for(var i=0;i<kids.length;i++){__scan(kids[i])}
+ function __scan(k){
+  if(tag&&k.tag!==tag){}else if(id&&k.attrs['id']!==id){}else{
+   var ok=true;var kc=(' '+(k.attrs['class']||'')+' ');
+   for(var c=0;c<cls.length;c++){if(kc.indexOf(' '+cls[c]+' ')<0){ok=false;break}}
+   if(ok)out.push(k)}
+  var ks=k.kids||[];for(var j=0;j<ks.length;j++){__scan(ks[j])}}
+ return out}
+globalThis.__fmParse=__parse;
+function __wrap(h){var root={tag:'#root',attrs:{},kids:[],text:'',html:String(h)};
+ var ns=__parse(String(h));
+ for(var i=0;i<ns.length;i++){if(!ns[i].parent){ns[i].parent=root;root.kids.push(ns[i])}}
+ return new J([root])}
+globalThis.$=function(h){return __wrap(h)};
+globalThis.jQuery=globalThis.$;
+globalThis.jsoup=function(h){return __wrap(h)};
+function __one(node,seg){var d=__desc(node,seg);return d.length?d[0]:null}
+function __walk(root,rule){var segs=String(rule||'').split('&&');
+ var target=root,lastAttr='';
+ var lastSeg=segs[segs.length-1];
+ var ai=lastSeg.indexOf('--');
+ if(ai>=0){lastAttr=lastSeg.substring(ai+2);segs[segs.length-1]=lastSeg.substring(0,ai)}
+ for(var i=0;i<segs.length;i++){var seg=segs[i].trim();if(!seg)continue;
+  target=__one(target,seg);if(!target)return null}
+ return {node:target,attr:lastAttr}}
+globalThis.pdfh=function(h,rule){var r=__walk(__wrap(h).list[0],rule);
+ if(!r||!r.node)return '';
+ if(!r.attr||r.attr==='TEXT')return r.node.text||'';
+ return r.node.attrs[r.attr.toLowerCase()]||''};
+globalThis.pd=function(h,rule){return globalThis.pdfh(h,rule)};
+globalThis.pdfl=function(h,rule){var r=__walk(__wrap(h).list[0],rule);
+ if(!r||!r.node)return '';
+ if(!r.attr||r.attr==='TEXT')return r.node.text||'';
+ return r.node.attrs[r.attr.toLowerCase()]||''};
+globalThis.pdfa=function(h,rule){var root=__wrap(h).list[0];
+ var segs=String(rule||'').split('&&'),lastAttr='';
+ var lastSeg=segs[segs.length-1],ai=lastSeg.indexOf('--');
+ if(ai>=0){lastAttr=lastSeg.substring(ai+2);segs[segs.length-1]=lastSeg.substring(0,ai)}
+ var cur=[root];
+ for(var i=0;i<segs.length;i++){var seg=segs[i].trim();if(!seg)continue;var nx=[];
+  for(var j=0;j<cur.length;j++){nx=nx.concat(__desc(cur[j],seg))}
+  cur=nx}
+ var out=[];
+ for(var k=0;k<cur.length;k++){var n=cur[k];
+  if(!lastAttr||lastAttr==='TEXT')out.push(n.text||'');
+  else out.push(n.attrs[lastAttr.toLowerCase()]||'')}
+ return out};
+globalThis.pj=function(h,rule){return globalThis.pdfh(h,rule)};
+globalThis.pjfa=function(h,rule){return globalThis.pdfa(h,rule)};
+globalThis.pf=function(h,rule){return globalThis.pdfh(h,rule)};
+
+        } catch (e) {}
+        // 还原 X-BOX 自带的 Java 解析函数
+        for (var k in keep) if (Object.prototype.hasOwnProperty.call(keep, k)) { try { g[k] = keep[k]; } catch (e) {} }
+        // pdfh 系列以 X-BOX 原生为准后，同步导出等价别名（缺哪个补哪个）
+        if (typeof g.pj !== "function") g.pj = function (h, r) { return g.pdfh(h, r); };
+        if (typeof g.pjfa !== "function") g.pjfa = function (h, r) { return g.pdfa(h, r); };
+        if (typeof g.pf !== "function") g.pf = function (h, r) { return g.pdfh(h, r); };
+        if (typeof g.pdfl !== "function") g.pdfl = function (h, r) { return g.pdfh(h, r); };
+        if (typeof g.$ === "undefined") g.$ = g.jsoup || undefined;
+        if (typeof g.jQuery === "undefined") g.jQuery = g.$;
+
+        // 编码/摘要别名
+        if (typeof g.MD5 === "undefined" && typeof g.md5X === "function") g.MD5 = g.md5X;
+        if (typeof g.md5 === "undefined" && typeof g.md5X === "function") g.md5 = g.md5X;
+        if (typeof g.base64X === "undefined" && typeof g.base64Encode === "function") g.base64X = g.base64Encode;
+        if (typeof g.desX !== "function") {
+            g.desX = function (a) {
+                try {
+                    var C = g.CryptoJS;
+                    if (!C || !C.DES) return "";
+                    var arr = a || [];
+                    // CatVod 约定：desX(mode, crypt, input, key, iv)
+                    var mode = String(arr[0] || "ECB").toUpperCase();
+                    var enc = String(arr[1] || "0") !== "0";
+                    var input = String(arr[2] == null ? "" : arr[2]);
+                    var key = String(arr[3] == null ? "" : arr[3]);
+                    var iv = String(arr[4] == null ? "" : arr[4]);
+                    var cfg = { mode: C.mode.ECB, padding: C.pad.Pkcs7 };
+                    if (mode.indexOf("CBC") >= 0) { cfg.mode = C.mode.CBC; cfg.iv = C.enc.Utf8.parse(iv); }
+                    var k = C.enc.Utf8.parse(key);
+                    return enc ? C.DES.encrypt(input, k, cfg).toString()
+                               : C.DES.decrypt({ ciphertext: C.enc.Hex.parse(input) }, k, cfg).toString(C.enc.Utf8);
+                } catch (e) { return ""; }
+            };
+        }
+        if (typeof g.gbkDecode !== "function") {
+            g.gbkDecode = function (b) {
+                try {
+                    if (g.GBK && typeof g.GBK.decode === "function") return g.GBK.decode(b);
+                    if (typeof TextDecoder === "function") return new TextDecoder("gbk").decode(b);
+                } catch (e) {}
+                return "";
+            };
+        }
+
+        // 同步请求：request(url, options) -> 字符串
+        if (typeof g.request !== "function") {
+            g.request = function (u, o) {
+                try {
+                    var opt = Object.assign({ async: false }, o || {});
+                    var r = g._http(String(u), opt);
+                    if (r == null) return "";
+                    if (typeof r === "string") return r;
+                    if (typeof r.content !== "undefined" && r.content !== null) return String(r.content);
+                    if (typeof r.body !== "undefined" && r.body !== null) return String(r.body);
+                    return String(r);
+                } catch (e) { return ""; }
+            };
+        }
+
+        // Java 桥对象（appmenu 寄生脚本常用）
+        if (typeof g.Java === "undefined") {
+            var Java = {
+                req: function (u, o) {
+                    try { var r = g._http(String(u), Object.assign({ async: false }, o || {})); return r == null ? { body: "" } : r; }
+                    catch (e) { return { body: "" }; }
+                },
+                log: function (m) { try { g.console.log(m); } catch (e) {} },
+                writeLog: function (m) { Java.log(m); },
+                showToast: function (m) { Java.log("toast: " + m); },
+                showAlertDialog: function (t, m) { Java.log("alert: " + t + " " + m); },
+                showConfirmDialog: function () { return false; },
+                showInputDialog: function (t, m, d) { return (d === undefined || d === null) ? "" : String(d); },
+                getCache: function (k) { try { return g.local.get(String(k)); } catch (e) { return ""; } },
+                setCache: function (k, v) { try { g.local.set(String(k), String(v)); } catch (e) {} return true; },
+                removeCache: function (k) { try { g.local.remove(String(k)); } catch (e) {} return true; },
+                clearCache: function () { try { g.local.clear(); } catch (e) {} return true; },
+                setCookie: function (u, c) { try { g.setCookie(String(u), String(c)); } catch (e) {} return true; },
+                getCookies: function (u) { try { return String(g.getCookie(String(u)) || ""); } catch (e) { return ""; } },
+                getSearchCode: function () { return ""; },
+                sniff: function () { return ""; },
+                wvOpen: function (u, h) { try { return g.request(String(u), { headers: h || {} }); } catch (e) { return ""; } },
+                open: function (u, h) { return Java.wvOpen(u, h); },
+                hideWebView: function () { return true; },
+                wvPlayer: function () { return false; },
+                wvPlayerDismiss: function () { return true; },
+                wvPlayerIsShowing: function () { return false; },
+                wvPlayerSetScale: function () { return true; },
+                wvPlayerSetAllowInteraction: function () { return true; },
+                wvPlayerGetVolume: function () { return 0; }
+            };
+            try { g.Java = Java; } catch (e) {}
+            try { if (typeof g.window === "undefined") g.window = g; g.window.Java = Java; } catch (e) {}
+        }
+
+        // Result 构造器（部分脚本用它返回错误/提示）
+        if (typeof g.Result === "undefined") {
+            g.Result = {
+                error: function (m) { return { code: 0, msg: String(m), list: [], __error: String(m) }; },
+                notify: function (m) { return { code: 0, msg: String(m), __notify: String(m) }; }
+            };
+        }
+    })();
 })();
