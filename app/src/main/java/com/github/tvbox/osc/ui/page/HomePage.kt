@@ -178,19 +178,6 @@ fun HomePage(
     val sortLoadFailed by vm.sortLoadFailed.collectAsStateWithLifecycle()
     val homeLayout by HomeSettings.layoutFlow.collectAsStateWithLifecycle()
     LaunchedEffect(homeLayout) { vm.onLayoutChanged() }
-    // 从站点管理 / 配置管理等页面回到首页时，按当前站点重新套一次代理：
-    // 那边改过配置后，首页的代理状态可能与新配置不一致（旧的还挂着、新的没生效）
-    val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, currentSource) {
-        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_RESUME) {
-                SiteProxy.apply(currentSource)
-                proxyOn = SiteProxy.isEnabled(currentSource)
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
     LaunchedEffect(vm) {
         vm.pageErrorEvents.collect { msg ->
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -206,6 +193,19 @@ fun HomePage(
 
     var showSourceSheet by remember { mutableStateOf(false) }
     var proxyOn by remember(currentSource) { mutableStateOf(SiteProxy.isEnabled(currentSource)) }
+    // 从站点管理 / 配置管理等页面回到首页时，按当前站点重新套一次代理：
+    // 那边改过配置后，首页的代理状态可能与新配置不一致（旧的还挂着、新的没生效）
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, currentSource) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                SiteProxy.apply(currentSource)
+                proxyOn = SiteProxy.isEnabled(currentSource)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     var extValue by remember(currentSource) { mutableStateOf(SiteExt.current(currentSource)) }
     var extDialog by remember { mutableStateOf(false) }
     var proxyUrlDialog by remember { mutableStateOf(false) }
