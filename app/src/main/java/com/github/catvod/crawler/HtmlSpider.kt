@@ -121,6 +121,10 @@ class HtmlSpider(
         }
         Handler(Looper.getMainLooper()).post {
             try {
+                // 同一站点复用已存活的页面，不再每次调用都新建 Activity，
+                // 否则首页加载（homeContent/homeVideoContent/categoryContent）会反复前后台切换
+                if (HtmlActivity.dispatchToLive(request)) return@post
+                HtmlActivity.finishIfRunning(null)
                 HtmlActivity.pending = request
                 ctx.startActivity(
                     android.content.Intent(ctx, HtmlActivity::class.java)
