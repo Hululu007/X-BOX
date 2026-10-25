@@ -28,6 +28,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -273,7 +276,18 @@ private fun SearchScopeActions(query: String, onSearch: (String) -> Unit) {
     val allKeys = remember {
         ApiConfig.get().getSourceBeanList().filter(SourceBean::isSearchable).map { it.key.orEmpty() }.toSet()
     }
-    fun apply(range: Set<String>, hintRes: Int) {
+    fun currentMode(): Int {
+        val sel = SearchSettings.currentSelection()
+        val homeKey = ApiConfig.get().getHomeSourceBean()?.key.orEmpty()
+        return when {
+            sel == null || sel.isEmpty() -> 0
+            homeKey.isNotEmpty() && sel.size == 1 && sel.contains(homeKey) -> 1
+            else -> 2
+        }
+    }
+    var mode by remember { mutableIntStateOf(currentMode()) }
+    fun apply(range: Set<String>, hintRes: Int, nextMode: Int) {
+        mode = nextMode
         SearchSettings.putSourcesForSearch(range)
         SearchViewModel.loadCheckedSources()
         val text = query.trim()
@@ -286,26 +300,29 @@ private fun SearchScopeActions(query: String, onSearch: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 12.dp, end = 12.dp),
+            .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         SearchActionButton(
             text = stringResource(R.string.search_action_all),
             modifier = Modifier.weight(1f),
-            onClick = { apply(allKeys, R.string.search_scope_all) },
+            selected = mode == 0,
+            onClick = { apply(allKeys, R.string.search_scope_all, 0) },
         )
         SearchActionButton(
             text = stringResource(R.string.search_action_home),
             modifier = Modifier.weight(1f),
+            selected = mode == 1,
             onClick = {
                 val homeKey = ApiConfig.get().getHomeSourceBean()?.key
                 val range = if (homeKey.isNullOrEmpty()) allKeys else setOf(homeKey)
-                apply(range, R.string.search_scope_home)
+                apply(range, R.string.search_scope_home, 1)
             },
         )
         SearchActionButton(
             text = stringResource(R.string.search_action_selected),
             modifier = Modifier.weight(1f),
+            selected = mode == 2,
             onClick = {
                 val selection = SearchSettings.currentSelection()
                 val range = when {
@@ -313,7 +330,7 @@ private fun SearchScopeActions(query: String, onSearch: (String) -> Unit) {
                     selection.isEmpty() -> allKeys
                     else -> selection.filter { it in allKeys }.toSet().ifEmpty { allKeys }
                 }
-                apply(range, R.string.search_scope_selected)
+                apply(range, R.string.search_scope_selected, 2)
             },
         )
     }
