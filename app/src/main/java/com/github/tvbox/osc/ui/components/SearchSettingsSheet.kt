@@ -41,14 +41,14 @@ import com.github.tvbox.osc.bean.SourceBean
 import com.github.tvbox.osc.net.SearchSettings
 import com.github.tvbox.osc.util.HomeSettings
 
-private val SourceCardShapeLeft = RoundedCornerShape(
+val SourceCardShapeLeft = RoundedCornerShape(
     topStart = 28.dp,
     bottomStart = 28.dp,
     topEnd = 4.dp,
     bottomEnd = 4.dp,
 )
 
-private val SourceCardShapeRight = RoundedCornerShape(
+val SourceCardShapeRight = RoundedCornerShape(
     topStart = 4.dp,
     bottomStart = 4.dp,
     topEnd = 28.dp,
@@ -219,12 +219,14 @@ fun SearchSettingsSheet(onDismiss: () -> Unit, onSelectionChanged: () -> Unit) {
 fun SearchActionButton(
     text: String,
     modifier: Modifier = Modifier,
+    selected: Boolean = false,
     onClick: () -> Unit,
 ) {
     Surface(
         onClick = onClick,
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.secondaryContainer,
+        color = if (selected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.secondaryContainer,
         modifier = modifier,
     ) {
         Box(
@@ -236,7 +238,8 @@ fun SearchActionButton(
             Text(
                 text = text,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                color = if (selected) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onSecondaryContainer,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -245,7 +248,7 @@ fun SearchActionButton(
 }
 
 @Composable
-private fun SourceCard(
+fun SourceCard(
     name: String,
     selected: Boolean,
     dotOnLeft: Boolean,
