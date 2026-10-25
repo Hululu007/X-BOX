@@ -185,16 +185,3 @@ jobs:
           body_path: release_body.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # 用 GITHUB_TOKEN 创建的 release 不会触发 notify.yml 的 release 事件，故在此显式调用
-  notify:
-    needs: build
-    if: needs.build.outputs.release_existed != 'true'
-    uses: ./.github/workflows/notify.yml
-    with:
-      tag: ${{ inputs.version }}
-    secrets:
-      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
