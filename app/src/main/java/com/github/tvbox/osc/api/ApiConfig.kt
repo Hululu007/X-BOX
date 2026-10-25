@@ -105,11 +105,33 @@ class ApiConfig private constructor() {
     }
 
     fun loadConfig(useCache: Boolean, callback: LoadConfigCallback, activity: Activity?) {
-        configLoader.loadConfig(useCache, callback, activity)
+        // 拉在线订阅不属于任何站点，先摘掉站点代理，避免上个站点的代理越界作用到订阅拉取上
+        SiteProxy.suspendInfra()
+        configLoader.loadConfig(useCache, InfraAwareCallback(callback), activity)
     }
 
     fun loadLiveConfig(useCache: Boolean, callback: LoadConfigCallback) {
-        configLoader.loadLiveConfig(useCache, callback)
+        SiteProxy.suspendInfra()
+        configLoader.loadLiveConfig(useCache, InfraAwareCallback(callback))
+    }
+
+    /** 订阅拉取结束（成功或失败）都恢复站点代理，防止一次失败把代理永久摘掉 */
+    private class InfraAwareCallback(private val delegate: LoadConfigCallback) : LoadConfigCallback {
+        private var done = false
+        private fun finish() {
+            if (done) return
+            done = true
+            SiteProxy.resumeInfra()
+        }
+        override fun success() {
+            finish()
+            delegate.success()
+        }
+        override fun error(msg: String?) {
+            finish()
+            delegate.error(msg)
+        }
+        override fun notice(msg: String?) = delegate.notice(msg)
     }
 
     fun refreshConfigIfChanged(onChanged: (String, String) -> Unit) {
