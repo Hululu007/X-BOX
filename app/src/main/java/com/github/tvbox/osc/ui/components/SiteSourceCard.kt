@@ -2,8 +2,6 @@ package com.github.tvbox.osc.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,10 +11,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.ripple
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
@@ -55,17 +51,12 @@ fun SiteSourceCard(
     dotOnLeft: Boolean = true,
     shape: Shape = SiteCardShapeSingle,
     subtitle: String? = null,
-    onLongClick: (() -> Unit)? = null,
 ) {
     Surface(
+        onClick = onClick,
         shape = shape,
         color = MaterialTheme.colorScheme.surfaceBright,
-        modifier = modifier.combinedClickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = ripple(),
-            onClick = onClick,
-            onLongClick = onLongClick,
-        ),
+        modifier = modifier,
     ) {
         Box(
             modifier = Modifier

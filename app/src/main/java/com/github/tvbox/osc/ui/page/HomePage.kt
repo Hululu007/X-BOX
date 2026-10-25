@@ -63,7 +63,6 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -71,6 +70,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -106,8 +106,6 @@ import com.github.tvbox.osc.ui.components.HomeBackdrop
 import com.github.tvbox.osc.ui.components.HomeHeroBackdrop
 import com.github.tvbox.osc.ui.components.LoadState
 import com.github.tvbox.osc.ui.components.homeHeroBackdropSupported
-import com.github.tvbox.osc.ui.UiDimens
-import com.github.tvbox.osc.ui.rememberUiScale
 import com.github.tvbox.osc.ui.components.LoadStateBox
 import com.github.tvbox.osc.ui.components.LocalSheetDismiss
 import com.github.tvbox.osc.ui.components.SearchField
@@ -125,7 +123,6 @@ import com.github.tvbox.osc.ui.components.SiteCardShapeSingle
 import com.github.tvbox.osc.ui.components.DenseSegmentContentPadding
 import com.github.tvbox.osc.ui.components.SiteKind
 import com.github.tvbox.osc.ui.components.SiteSourceCard
-import com.github.tvbox.osc.ui.components.tableGridTexture
 import com.github.tvbox.osc.ui.components.siteKindOf
 import com.github.tvbox.osc.ui.components.SettingsRow
 import com.github.tvbox.osc.ui.components.SkeletonBox
@@ -535,16 +532,15 @@ fun HomePage(
     }
 
     if (showSourceSheet) {
+        val sheetHeight = (screenHeightDp * 0.72f).dp
         AVBoxBottomSheet(
             onDismissRequest = { showSourceSheet = false },
-            modifier = Modifier.height((screenHeightDp * UiDimens.sheetFixedFraction()).dp),
+            modifier = Modifier.height(sheetHeight),
             title = stringResource(R.string.home_subscription_source),
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             isScrollable = false,
         ) {
             val dismissAnimated = LocalSheetDismiss.current
-            val uiScale = rememberUiScale()
-            val tableCell = remember(uiScale) { UiDimens.tableCellDp(uiScale) }
             val keyboard = LocalSoftwareKeyboardController.current
             val focusManager = LocalFocusManager.current
             val subscribes by vm.subscribeItems.collectAsStateWithLifecycle()
@@ -640,40 +636,52 @@ fun HomePage(
                     )
                 }
             }
-            val listModifier = Modifier
-                .fillMaxWidth()
-                .clearFocusOnDrag(focusManager)
-                .pointerInput(focusManager) {
-                    detectTapGestures(onTap = { focusManager.clearFocus() })
-                }
-            // 列表区高度固定（占满顶部控件之外的剩余空间）：
-            // 站点少时下方留白并显示表格纹理，站点多时在区内滚动，
-            // 弹窗本身大小恒定，不会随站点数量变化。
+            val gridLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+            val gridRowHeight = 52.dp
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .tableGridTexture(
-                        cellWidth = tableCell,
-                        cellHeight = tableCell,
-                        lineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f),
-                    ),
+                    .drawBehind {
+                        val rowH = gridRowHeight.toPx()
+                        val colW = size.width / perRow
+                        var y = rowH
+                        while (y < size.height) {
+                            drawLine(
+                                color = gridLineColor,
+                                start = Offset(0f, y),
+                                end = Offset(size.width, y),
+                                strokeWidth = 1f,
+                            )
+                            y += rowH
+                        }
+                        for (c in 1 until perRow) {
+                            val x = colW * c
+                            drawLine(
+                                color = gridLineColor,
+                                start = Offset(x, 0f),
+                                end = Offset(x, size.height),
+                                strokeWidth = 1f,
+                            )
+                        }
+                    }
+                    .clearFocusOnDrag(focusManager)
+                    .pointerInput(focusManager) {
+                        detectTapGestures(onTap = { focusManager.clearFocus() })
+                    },
             ) {
                 LazyColumn(
                     state = listState,
-                    modifier = listModifier,
-                    contentPadding = PaddingValues(bottom = 16.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    if (visible.isEmpty()) {
+                    if (visible.isEmpty() && query.isNotEmpty()) {
                         item {
                             LoadStateBox(
                                 state = LoadState.Empty,
-                                emptyText = stringResource(
-                                    if (query.isEmpty()) R.string.config_empty_subscribe else R.string.home_site_search_empty,
-                                ),
+                                emptyText = stringResource(R.string.home_site_search_empty),
                                 errorText = "",
                                 retryText = "",
                                 emptyIconRes = R.drawable.ic_empty_record,
@@ -715,12 +723,11 @@ fun HomePage(
                     }
                 }
             }
-            // 配置管理置底：不随列表滚动，始终贴在弹窗底部。
             SettingsGroup(
                 title = null,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+                    .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 16.dp),
             ) {
                 SettingsCard(
                     position = SettingsCardPosition.SINGLE,
