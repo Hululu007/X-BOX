@@ -169,6 +169,12 @@ class HomeViewModel : ViewModel() {
         loadHome()
     }
 
+    /** 刷新站点列表与订阅源列表（不重载首页内容） */
+    fun refreshSources() {
+        sources.value = ApiConfig.get().getSwitchSourceBeanList()
+        refreshSubscribes()
+    }
+
     fun isSubscribeDisabled(item: SubscribeSource): Boolean = BootGuard.isDisabledSource(item.url)
 
     fun switchSubscribe(item: SubscribeSource) {
