@@ -182,8 +182,6 @@ class Global {
 
     @Keep
     @Function
-    @Keep
-    @Function
     fun md5X(text: String?): String {
         return try {
             MD5.encode(text ?: "") ?: ""
