@@ -211,6 +211,18 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                                 )
                             },
                         )
+                        val onlyLocal = selected.size == 1 &&
+                            LocalScriptSource.isLocalScript(parseSubscribe(selected.first()).url)
+                        if (onlyLocal) {
+                            ManageActionIcon(
+                                iconRes = R.drawable.ic_site_manage,
+                                contentDescription = stringResource(R.string.config_site_manage),
+                                enabled = true,
+                                onClick = {
+                                    siteManageDir = LocalScriptSource.path(parseSubscribe(selected.first()).url)
+                                },
+                            )
+                        }
                     }
                 } else {
                     Row(
@@ -235,7 +247,7 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                                 onClick = { addDialogOpen = true },
                             )
                             TopBarActionBox(
-                                iconRes = R.drawable.ic_script,
+                                iconRes = R.drawable.ic_import,
                                 contentDescription = stringResource(R.string.config_add_local_script),
                                 onClick = { localScriptDialog = true },
                             )
@@ -354,17 +366,14 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                             onClick = {
                                 if (manageMode) {
                                     vm.toggleSelected(value)
+                                } else if (inUse) {
+                                    // 已经在这个接口上，再点一次就是“用这个接口去看”，直接回首页
+                                    onNavigateBack()
                                 } else {
                                     vm.requestSwitch(item, mIsVod)
                                 }
                             },
-                            onLongClick = {
-                                if (!manageMode && LocalScriptSource.isLocalScript(item.url)) {
-                                    siteManageDir = LocalScriptSource.path(item.url)
-                                } else {
-                                    vm.longPressSelect(value)
-                                }
-                            },
+                            onLongClick = { vm.longPressSelect(value) },
                             onCheckedChange = { checked ->
                                 if (checked) {
                                     vm.requestSwitch(item, mIsVod)
