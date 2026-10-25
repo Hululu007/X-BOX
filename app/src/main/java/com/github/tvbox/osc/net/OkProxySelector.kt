@@ -13,7 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 class OkProxySelector : ProxySelector() {
 
     /** 站点级代理规则的固定名称（SiteProxy 生成），用于做“基础设施请求豁免” */
-    const val SITE_RULE_NAME = "site_proxy"
+    val SITE_RULE_NAME = "site_proxy"
 
     /**
      * 拉取在线订阅 / 更新等基础设施请求时不走【站点代理】。
