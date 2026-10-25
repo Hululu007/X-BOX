@@ -2,6 +2,7 @@ package com.github.catvod.crawler
 
 import android.os.Handler
 import android.os.Looper
+import com.github.tvbox.osc.ui.activity.HtmlActivity
 import com.github.tvbox.osc.util.AppContextHolder
 import com.github.tvbox.osc.util.LOG
 import org.json.JSONObject
@@ -24,10 +25,14 @@ import java.util.concurrent.atomic.AtomicReference
  * CountDownLatch 做同步等待并带超时 —— 脚本不回调也不会把调用方卡死。
  */
 class HtmlSpider(
-    private val siteKey: String?,
+    key: String?,
     private val api: String?,
     private val extend: String?,
 ) : Spider() {
+
+    init {
+        this.siteKey = key
+    }
 
     override fun init(context: android.content.Context?) {
         // 无状态：每次调用现起 Activity，不需要预加载
@@ -44,17 +49,22 @@ class HtmlSpider(
         pg: String,
         filter: Boolean,
         extend: HashMap<String, String>?,
-    ): String? = call(
-        "categoryContent",
-        JSONObject()
-            .put("tid", tid ?: "")
-            .put("pg", pg)
-            .put("filter", filter)
-            .put("extend", JSONObject(extend ?: emptyMap()).toString()),
-    )
+    ): String? {
+        val map: Map<String, String> = extend ?: emptyMap()
+        return call(
+            "categoryContent",
+            JSONObject()
+                .put("tid", tid ?: "")
+                .put("pg", pg)
+                .put("filter", filter)
+                .put("extend", JSONObject(map).toString()),
+        )
+    }
 
-    override fun detailContent(ids: List<String>?): String? =
-        call("detailContent", JSONObject().put("ids", org.json.JSONArray(ids ?: emptyList())))
+    override fun detailContent(ids: List<String>?): String? {
+        val list: List<String> = ids ?: emptyList()
+        return call("detailContent", JSONObject().put("ids", org.json.JSONArray(list)))
+    }
 
     override fun searchContent(key: String?, quick: Boolean): String? =
         call("searchContent", JSONObject().put("key", key ?: "").put("quick", quick))
@@ -75,7 +85,8 @@ class HtmlSpider(
         )
 
     override fun proxyLocal(params: Map<String, String>?): Array<Any?>? {
-        val raw = call("localProxy", JSONObject(params ?: emptyMap())) ?: return null
+        val map: Map<String, String> = params ?: emptyMap()
+        val raw = call("localProxy", JSONObject(map)) ?: return null
         return try {
             val o = JSONObject(raw)
             val code = o.optInt("code", 200)
