@@ -89,7 +89,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.github.tvbox.osc.R
 import com.github.tvbox.osc.bean.Movie
 import com.github.tvbox.osc.bean.MovieSort
@@ -174,6 +177,19 @@ fun HomePage(
     val sortLoadFailed by vm.sortLoadFailed.collectAsStateWithLifecycle()
     val homeLayout by HomeSettings.layoutFlow.collectAsStateWithLifecycle()
     LaunchedEffect(homeLayout) { vm.onLayoutChanged() }
+    // 从站点管理 / 配置管理等页面回到首页时，按当前站点重新套一次代理：
+    // 那边改过配置后，首页的代理状态可能与新配置不一致（旧的还挂着、新的没生效）
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, currentSource) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                SiteProxy.apply(currentSource)
+                proxyOn = SiteProxy.isEnabled(currentSource)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     LaunchedEffect(vm) {
         vm.pageErrorEvents.collect { msg ->
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -611,7 +627,7 @@ fun HomePage(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 8.dp, bottom = 8.dp),
+                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 CapsuleSegmentedButton(
@@ -627,14 +643,6 @@ fun HomePage(
                         .weight(1f)
                         .padding(end = 4.dp),
                 )
-                IconButton(onClick = { vm.refreshSourceList() }, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        imageVector = Icons.Outlined.Refresh,
-                        contentDescription = stringResource(R.string.common_refresh),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
             }
             val gridLineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
             val gridRowHeight = 52.dp
