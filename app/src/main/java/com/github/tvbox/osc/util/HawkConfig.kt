@@ -93,6 +93,8 @@ object HawkConfig {
     const val DANMU_API = "danmu_api"
     const val PROXY_URL = "proxy_url"
     const val SITE_PROXY_OVERRIDE = "site_proxy_override"
+    /** 记录临时切换时的站点 api，用于避免同名 key 在不同订阅源之间串味 */
+    const val SITE_PROXY_OVERRIDE_API = "site_proxy_override_api"
     const val SITE_EXT_OVERRIDE = "site_ext_override"
     const val DANMU_API_USE_DEFAULT = "danmu_api_use_default"
     const val SOURCE_NAME_CACHE = "source_name_cache"
