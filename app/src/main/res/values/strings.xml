@@ -648,4 +648,16 @@
     <string name="config_local_script_hint">填写存放 py/js 脚本的目录</string>
     <string name="toast_local_script_empty">该目录下没有找到 py/js 脚本</string>
     <string name="toast_local_script_added">已添加，共 %1$d 个脚本</string>
+    <string name="config_field_path">目录</string>
+    <string name="config_list_double">双列</string>
+    <string name="config_list_single">单列</string>
+    <string name="config_script_path_hint">脚本目录，例如 /storage/emulated/0/脚本</string>
+    <string name="home_site_ext">扩展参数</string>
+    <string name="home_site_ext_hint">该站点的 ext，留空则使用订阅源的值</string>
+    <string name="search_action_all">全站搜索</string>
+    <string name="search_action_home">站内搜索</string>
+    <string name="search_action_selected">选中搜索</string>
+    <string name="search_scope_home">已切换为站内搜索</string>
+    <string name="toast_proxy_url_saved">代理地址已保存</string>
+    <string name="toast_site_ext_saved">已保存，正在刷新</string>
 </resources>
