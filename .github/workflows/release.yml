@@ -84,34 +84,36 @@ jobs:
           ls -l .key/app-release.jks
 
       - name: Build release APK
-        id: gradle_build
+        id: gradle
         run: |
           set -o pipefail
-          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee build-log.txt
+          ./gradlew assembleRelease --no-daemon --stacktrace 2>&1 | tee build.log
+          echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
-      - name: Upload build log
-        if: always()
+      - name: Publish build log back to repo (on failure)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          cp build.log _build_log.txt || true
           git config user.name "ci-bot"
           git config user.email "ci-bot@users.noreply.github.com"
-          git fetch origin ci-logs || true
-          git checkout -B ci-logs
-          mkdir -p ci-logs
-          cp build-log.txt "ci-logs/build-${{ github.run_number }}.log" 2>/dev/null || true
-          git add -f ci-logs
-          git commit -m "ci log run ${{ github.run_number }}" || exit 0
-          git push -f origin ci-logs
+          git add -f _build_log.txt || true
+          git commit -m "ci: build log $(date -u +%Y%m%dT%H%M%SZ)" || echo "nothing to commit"
+          for i in 1 2 3; do
+            git push origin HEAD:${{ github.ref_name }} && break || sleep 5
+          done || echo "push failed"
 
       - name: Rename & verify APK
         id: apk
         run: |
           set -euo pipefail
-          SRC=app/build/outputs/apk/release/X-BOX_release.apk
+          SRC=app/build/outputs/apk/release/AVBox_release.apk
           test -f "$SRC" || { echo "::error::未找到 $SRC"; exit 1; }
 
           VERSION='${{ github.event.inputs.version }}'
-          OUT="X-BOX_${VERSION}_arm64-v8a.apk"
+          OUT="AVBox_${VERSION}_arm64-v8a.apk"
           cp "$SRC" "$OUT"
 
           APKSIGNER="$(find "${ANDROID_HOME:-$ANDROID_SDK_ROOT}/build-tools" -name apksigner -type f | sort -r | head -n1)"
@@ -183,3 +185,16 @@ jobs:
           body_path: release_body.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # 用 GITHUB_TOKEN 创建的 release 不会触发 notify.yml 的 release 事件，故在此显式调用
+  notify:
+    needs: build
+    if: needs.build.outputs.release_existed != 'true'
+    uses: ./.github/workflows/notify.yml
+    with:
+      tag: ${{ inputs.version }}
+    secrets:
+      TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      TELEGRAM_THREAD_ID: ${{ secrets.TELEGRAM_THREAD_ID }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
