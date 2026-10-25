@@ -270,7 +270,7 @@ fun PreferenceSettingsScreen(onNavigateBack: () -> Unit, vm: SettingsViewModel =
             onDismiss = { proxyUrlDialog = false },
             onConfirm = { text ->
                 SiteProxy.setConfiguredUrl(text)
-                SiteProxy.apply(ApiConfig.getHomeSourceBean())
+                SiteProxy.apply(ApiConfig.get().getHomeSourceBean())
                 vm.refresh()
                 proxyUrlDialog = false
             },

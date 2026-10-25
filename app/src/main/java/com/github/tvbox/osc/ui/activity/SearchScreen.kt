@@ -84,7 +84,7 @@ fun SearchScreen(vm: SearchViewModel = rememberSearchViewModel()) {
     val sitesEmpty by vm.sitesEmpty.collectAsState()
     val vodMenu = rememberVodCardMenuState()
     var resultLayout by remember { mutableStateOf(SearchSettings.resultLayout()) }
-    val searchScope by vm.scope.collectAsState()
+    val searchScope by vm.searchScope.collectAsState()
 
     LaunchedEffect(Unit) {
         if (SearchViewModel.isCheckedSourcesStale()) {

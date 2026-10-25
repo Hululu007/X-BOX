@@ -49,7 +49,7 @@ class SearchViewModel(initialTitle: String? = null) : ViewModel() {
     val hotSearch = MutableStateFlow<List<String>>(emptyList())
 
     /** 当前搜索范围：全站 / 站内 / 选中。 */
-    val scope = MutableStateFlow(SearchSettings.scope())
+    val searchScope = MutableStateFlow(SearchSettings.scope())
 
     val suggest = MutableStateFlow<List<String>>(emptyList())
 
@@ -218,8 +218,8 @@ class SearchViewModel(initialTitle: String? = null) : ViewModel() {
 
     /** 切换搜索范围；返回本次是否顺带触发了搜索（有关键词时立即重搜）。 */
     fun setScope(next: SearchSettings.SearchScope): Boolean {
-        if (scope.value == next) return false
-        scope.value = next
+        if (searchScope.value == next) return false
+        searchScope.value = next
         SearchSettings.setScope(next)
         val t = searchedTitle.value.trim()
         if (t.isEmpty()) return false
@@ -235,7 +235,7 @@ class SearchViewModel(initialTitle: String? = null) : ViewModel() {
      */
     fun resolveScopeKeys(): Set<String>? {
         val homeKey = ApiConfig.get().getHomeSourceBean().key
-        return when (scope.value) {
+        return when (searchScope.value) {
             SearchSettings.SearchScope.Current -> if (homeKey.isNullOrEmpty()) emptySet() else setOf(homeKey)
             SearchSettings.SearchScope.Selected -> {
                 val picked = SearchSettings.currentSelection()

@@ -128,7 +128,7 @@ object SiteProxy {
             val app = loader?.pyApp ?: return
             app.callAttr("setSiteProxy", url)
         } catch (th: Throwable) {
-            LOG.d("$TAG: python proxy sync skipped | " + th.message)
+            LOG.d(TAG, "python proxy sync skipped | " + th.message)
         }
     }
 }
