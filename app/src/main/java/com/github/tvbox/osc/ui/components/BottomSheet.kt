@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.DraggableState
@@ -490,11 +491,17 @@ private fun SheetSurface(
                             Column(
                                 modifier = Modifier
                                     .weight(1f, fill = false)
+                                    .animateContentSize()
                                     .verticalScroll(rememberScrollState()),
                                 content = content,
                             )
                         } else {
-                            Column(modifier = Modifier.weight(1f, fill = false), content = content)
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f, fill = false)
+                                    .animateContentSize(),
+                                content = content,
+                            )
                         }
                     }
                 }
