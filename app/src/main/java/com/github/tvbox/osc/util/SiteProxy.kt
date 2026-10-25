@@ -35,6 +35,25 @@ object SiteProxy {
         }
     }
 
+    /** 覆盖项登记时的站点 api；旧数据没有记录，按“不限制”处理以保持兼容 */
+    private fun overrideApis(): MutableMap<String, String> {
+        return try {
+            KV.get(HawkConfig.SITE_PROXY_OVERRIDE_API, HashMap<String, String>())
+        } catch (th: Throwable) {
+            HashMap()
+        }
+    }
+
+    /**
+     * 覆盖项是否属于这个站点。
+     * 站点 key 只在单个订阅源内唯一，不同订阅源里同名站点 key 会重复 ——
+     * 只看 key 会让 A 源开的代理错误地作用到 B 源的同名站点上。
+     */
+    private fun overrideMatches(bean: SourceBean): Boolean {
+        val api = overrideApis()[bean.key] ?: return true
+        return api.isEmpty() || api == (bean.api ?: "")
+    }
+
     /** 设置里填写的代理地址 */
     fun configuredUrl(): String {
         val url = KV.get(HawkConfig.PROXY_URL, DEFAULT_URL)
@@ -86,21 +105,29 @@ object SiteProxy {
         val key = bean?.key ?: return false
         if (key.isEmpty()) return false
         val ov = overrides()[key]
-        if (ov != null) return ov
+        if (ov != null && overrideMatches(bean)) return ov
         return configuredEnabled(bean)
     }
 
     /** 是否处于临时切换状态 */
     fun isOverridden(bean: SourceBean?): Boolean {
         val key = bean?.key ?: return false
-        return key.isNotEmpty() && overrides().containsKey(key)
+        return key.isNotEmpty() && overrides().containsKey(key) && overrideMatches(bean)
     }
 
-    fun setOverride(key: String, enabled: Boolean?) {
+    fun setOverride(key: String, enabled: Boolean?, api: String? = null) {
         if (key.isEmpty()) return
         val next = HashMap<String, Boolean>(overrides())
-        if (enabled == null) next.remove(key) else next[key] = enabled
+        val nextApi = HashMap<String, String>(overrideApis())
+        if (enabled == null) {
+            next.remove(key)
+            nextApi.remove(key)
+        } else {
+            next[key] = enabled
+            nextApi[key] = api ?: ""
+        }
         KV.put(HawkConfig.SITE_PROXY_OVERRIDE, next)
+        KV.put(HawkConfig.SITE_PROXY_OVERRIDE_API, nextApi)
     }
 
     /** 首页代理图标：临时切换并立即生效 */
@@ -108,7 +135,7 @@ object SiteProxy {
         val key = bean?.key ?: return false
         if (key.isEmpty()) return false
         val next = !isEnabled(bean)
-        setOverride(key, next)
+        setOverride(key, next, bean.api ?: "")
         apply(bean)
         return next
     }
@@ -120,10 +147,32 @@ object SiteProxy {
     }
 
     fun clear() {
+        resumeInfra()
         applyGlobal("")
     }
 
+    /**
+     * 拉取在线订阅 / 更新这类基础设施请求期间，临时不套【站点代理】。
+     * 站点代理是给某个站点的爬虫临时开的，换个场景还在用就是越界。
+     */
+    fun suspendInfra() {
+        try {
+            OkGoHelper.proxySelector().suspendSiteProxy = true
+        } catch (th: Throwable) {
+            LOG.d(TAG, "suspend infra skipped | " + th.message)
+        }
+    }
+
+    fun resumeInfra() {
+        try {
+            OkGoHelper.proxySelector().suspendSiteProxy = false
+        } catch (th: Throwable) {
+            LOG.d(TAG, "resume infra skipped | " + th.message)
+        }
+    }
+
     private fun applyGlobal(url: String) {
+        resumeInfra()
         if (url.isEmpty()) {
             try {
                 OkGoHelper.setProxyList(null)
