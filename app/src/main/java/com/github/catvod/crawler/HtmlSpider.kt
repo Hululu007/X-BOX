@@ -75,14 +75,16 @@ class HtmlSpider(
             JSONObject().put("key", key ?: "").put("quick", quick).put("pg", pg ?: ""),
         )
 
-    override fun playerContent(flag: String?, id: String, vipFlags: List<String>?): String? =
-        call(
+    override fun playerContent(flag: String?, id: String, vipFlags: List<String>?): String? {
+        val list: List<String> = vipFlags ?: emptyList()
+        return call(
             "playerContent",
             JSONObject()
                 .put("flag", flag ?: "")
                 .put("id", id)
-                .put("vipFlags", org.json.JSONArray(vipFlags ?: emptyList())),
+                .put("vipFlags", org.json.JSONArray(list)),
         )
+    }
 
     override fun proxyLocal(params: Map<String, String>?): Array<Any?>? {
         val map: Map<String, String> = params ?: emptyMap()
