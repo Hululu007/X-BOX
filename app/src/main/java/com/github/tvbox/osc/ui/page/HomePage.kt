@@ -110,7 +110,16 @@ import com.github.tvbox.osc.ui.components.SearchSettingsSheet
 import com.github.tvbox.osc.ui.components.SettingsCard
 import com.github.tvbox.osc.ui.components.SettingsCardPosition
 import com.github.tvbox.osc.ui.components.SettingsGroup
+import com.github.tvbox.osc.ui.components.SegmentOption
+import com.github.tvbox.osc.ui.components.SegmentStyle
+import com.github.tvbox.osc.ui.components.CapsuleSegmentedButton
 import com.github.tvbox.osc.ui.components.SettingsOptionRow
+import com.github.tvbox.osc.ui.components.SiteCardShapeLeft
+import com.github.tvbox.osc.ui.components.SiteCardShapeRight
+import com.github.tvbox.osc.ui.components.SiteCardShapeSingle
+import com.github.tvbox.osc.ui.components.SiteKind
+import com.github.tvbox.osc.ui.components.SiteSourceCard
+import com.github.tvbox.osc.ui.components.siteKindOf
 import com.github.tvbox.osc.ui.components.SettingsRow
 import com.github.tvbox.osc.ui.components.SkeletonBox
 import com.github.tvbox.osc.ui.components.VodCard
@@ -566,6 +575,14 @@ fun HomePage(
                                 contentDescription = stringResource(R.string.home_subscription_source),
                             )
                         }
+                        IconButton(onClick = { vm.refreshSources() }) {
+                            Icon(
+                                painter = painterResource(R.drawable.player_ic_menu_refresh),
+                                contentDescription = stringResource(R.string.common_refresh),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                         IconButton(onClick = { HomeSettings.setSourceGrid(!sourceGrid) }) {
                             Icon(
                                 painter = painterResource(
@@ -581,6 +598,22 @@ fun HomePage(
                     }
                 },
             )
+            var sourceKind by remember { mutableStateOf(SiteKind.ALL) }
+            val visible = remember(filtered, sourceKind) {
+                filtered.filter { sourceKind == SiteKind.ALL || siteKindOf(it.api) == sourceKind }
+            }
+            val perRow = if (sourceGrid) 2 else 1
+            CapsuleSegmentedButton(
+                options = SiteKind.values().map { SegmentOption(it.label, it) },
+                selectedValue = sourceKind,
+                onOptionSelected = { sourceKind = it },
+                style = SegmentStyle.Separated,
+                containerColor = MaterialTheme.colorScheme.surfaceBright,
+                pressMorph = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+            )
             val listModifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 420.dp)
@@ -588,72 +621,13 @@ fun HomePage(
                 .pointerInput(focusManager) {
                     detectTapGestures(onTap = { focusManager.clearFocus() })
                 }
-            if (sourceGrid) {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    modifier = listModifier,
-                    // 观感对齐搜索结果双列：内边距 10/12、行列间距 10
-                    contentPadding = PaddingValues(start = 10.dp, end = 12.dp, bottom = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    if (filtered.isEmpty()) {
-                        item(span = { GridItemSpan(2) }) {
-                            LoadStateBox(
-                                state = LoadState.Empty,
-                                emptyText = stringResource(
-                                    if (query.isEmpty()) R.string.config_empty_subscribe else R.string.home_site_search_empty,
-                                ),
-                                errorText = "",
-                                retryText = "",
-                                emptyIconRes = R.drawable.ic_empty_record,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(160.dp),
-                            )
-                        }
-                    }
-                    gridItems(filtered, key = { it.key.orEmpty() }) { bean ->
-                        val selected = bean.key == currentSource?.key
-                        SettingsCard(
-                            position = SettingsCardPosition.SINGLE,
-                            color = MaterialTheme.colorScheme.surfaceBright,
-                        ) {
-                            SettingsOptionRow(
-                                title = bean.name ?: bean.key.orEmpty(),
-                                selected = selected,
-                                onClick = {
-                                    if (!selected) {
-                                        vm.switchSource(bean)
-                                    }
-                                    dismissAnimated()
-                                },
-                            )
-                        }
-                    }
-                    item(span = { GridItemSpan(2) }) {
-                        SettingsGroup(title = null, modifier = Modifier.padding(top = 12.dp)) {
-                            SettingsCard(
-                                position = SettingsCardPosition.SINGLE,
-                                color = MaterialTheme.colorScheme.surfaceBright,
-                            ) {
-                                SettingsRow(
-                                    title = stringResource(R.string.settings_config_manage),
-                                    onClick = {
-                                        dismissAnimated()
-                                        ConfigManageActivity.start(context)
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-            } else LazyColumn(
+            LazyColumn(
                 state = listState,
                 modifier = listModifier,
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                if (filtered.isEmpty()) {
+                if (visible.isEmpty()) {
                     item {
                         LoadStateBox(
                             state = LoadState.Empty,
@@ -669,28 +643,34 @@ fun HomePage(
                         )
                     }
                 }
-                itemsIndexed(filtered) { index, bean ->
-                    val selected = bean.key == currentSource?.key
-                    SettingsCard(
-                        position = when {
-                            filtered.size == 1 -> SettingsCardPosition.SINGLE
-                            index == 0 -> SettingsCardPosition.FIRST
-                            index == filtered.size - 1 -> SettingsCardPosition.LAST
-                            else -> SettingsCardPosition.MIDDLE
-                        },
-                        modifier = Modifier.padding(bottom = if (index == filtered.lastIndex) 0.dp else 2.dp),
-                        color = MaterialTheme.colorScheme.surfaceBright,
+                items(visible.chunked(perRow)) { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        SettingsOptionRow(
-                            title = bean.name ?: bean.key.orEmpty(),
-                            selected = selected,
-                            onClick = {
-                                if (!selected) {
-                                    vm.switchSource(bean)
-                                }
-                                dismissAnimated()
-                            },
-                        )
+                        row.forEachIndexed { index, bean ->
+                            val selected = bean.key == currentSource?.key
+                            SiteSourceCard(
+                                name = bean.name?.takeIf { it.isNotEmpty() } ?: bean.key.orEmpty(),
+                                selected = selected,
+                                dotOnLeft = index == 0,
+                                shape = if (perRow == 2) {
+                                    if (index == 0) SiteCardShapeLeft else SiteCardShapeRight
+                                } else {
+                                    SiteCardShapeSingle
+                                },
+                                onClick = {
+                                    if (!selected) {
+                                        vm.switchSource(bean)
+                                    }
+                                    dismissAnimated()
+                                },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (row.size < perRow) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
                 item {
