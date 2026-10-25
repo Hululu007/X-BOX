@@ -645,6 +645,7 @@
     <string name="toast_proxy_on">已开启代理</string>
     <string name="toast_proxy_off">已关闭代理</string>
     <string name="config_add_local_script">添加脚本本地地址</string>
+    <string name="config_site_manage">站点管理</string>
     <string name="config_local_script_hint">填写存放 py/js 脚本的目录</string>
     <string name="toast_local_script_empty">该目录下没有找到 py/js 脚本</string>
     <string name="toast_local_script_added">已添加，共 %1$d 个脚本</string>
