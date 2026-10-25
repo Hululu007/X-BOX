@@ -41,6 +41,8 @@ class HtmlActivity : Activity() {
     private var webView: WebView? = null
     private val mainHandler = Handler(Looper.getMainLooper())
     private var settled = false
+    private var currentReq: Request? = null
+    private var curSiteKey: String? = null
 
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,6 +53,9 @@ class HtmlActivity : Activity() {
             return
         }
         pendingRequest = req
+        currentReq = req
+        curSiteKey = req.siteKey
+        live = this
 
         val wv = WebView(this)
         webView = wv
@@ -69,7 +74,7 @@ class HtmlActivity : Activity() {
         wv.addJavascriptInterface(Bridge(req), "FmBridge")
 
         // 脚本不回调时兜底关闭，避免页面常驻挡住操作
-        mainHandler.postDelayed({ finishSafely(null) }, AUTO_CLOSE_MS)
+        mainHandler.postDelayed({ settle(null) }, AUTO_CLOSE_MS)
 
         wv.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
@@ -88,7 +93,11 @@ class HtmlActivity : Activity() {
     }
 
     override fun onDestroy() {
-        finishSafely(null)
+        if (live === this) live = null
+        mainHandler.removeCallbacks(idleClose)
+        val left = currentReq
+        currentReq = null
+        left?.callback?.invoke(null)
         webView?.destroy()
         webView = null
         super.onDestroy()
@@ -118,7 +127,7 @@ class HtmlActivity : Activity() {
                 view.evaluateJavascript(script, null)
             } catch (th: Throwable) {
                 LOG.e(TAG, th)
-                finishSafely(null)
+                settle(null)
             }
         }
     }
@@ -154,19 +163,47 @@ class HtmlActivity : Activity() {
         }
     }
 
-    private fun finishSafely(result: String?) {
-        if (settled) return
-        settled = true
-        val req = pendingRequest
+    /**
+     * 交付结果但【不关页】：同一站点的后续调用（翻页、点宫格…）继续复用本页。
+     * 之前是"每次调用都 startActivity → finish"，首页加载要跑
+     * homeContent / homeVideoContent / categoryContent 三次，于是反复前后台切换。
+     */
+    private fun settle(result: String?) {
+        val req = currentReq ?: pendingRequest ?: return
+        currentReq = null
         pendingRequest = null
-        mainHandler.removeCallbacksAndMessages(null)
-        req?.callback?.invoke(result)
+        try {
+            req.callback.invoke(result)
+        } catch (th: Throwable) {
+            LOG.e(TAG, th)
+        }
+        mainHandler.removeCallbacks(idleClose)
+        mainHandler.postDelayed(idleClose, IDLE_CLOSE_MS)
+    }
+
+    private val idleClose = Runnable { finishNow() }
+
+    private fun finishNow() {
+        mainHandler.removeCallbacks(idleClose)
+        val left = currentReq
+        currentReq = null
+        try {
+            left?.callback?.invoke(null)
+        } catch (th: Throwable) {
+            LOG.e(TAG, th)
+        }
         try {
             finish()
         } catch (ignored: Throwable) {
         }
-        // 切到下一个站点时应清掉本页的残留引用
-        if (pending?.equals(req) == true) pending = null
+    }
+
+    /** 复用本页再跑一次脚本（仅 siteKey 相同时调用） */
+    private fun dispatch(req: Request) {
+        mainHandler.removeCallbacks(idleClose)
+        currentReq = req
+        curSiteKey = req.siteKey
+        injectAndInvoke(req)
     }
 
     private fun readAsset(name: String): String? =
@@ -269,13 +306,14 @@ class HtmlActivity : Activity() {
 
         @JavascriptInterface
         fun done(result: String?) {
-            mainHandler.post { finishSafely(result) }
+            mainHandler.post { settle(result) }
         }
     }
 
     companion object {
         private const val TAG = "HtmlActivity"
         private const val AUTO_CLOSE_MS = 30_000L
+        private const val IDLE_CLOSE_MS = 8_000L
 
         @Volatile
         var pending: Request? = null
@@ -283,12 +321,33 @@ class HtmlActivity : Activity() {
         @Volatile
         private var pendingRequest: Request? = null
 
-        private fun varKey(siteKey: String, key: String?): String =
-            "html_var_" + siteKey + "_" + (key ?: "")
+        @Volatile
+        var live: HtmlActivity? = null
 
+        /** 站点相同则复用已存活的页面再跑一次，返回 true 表示已投递、无需新建 */
+        @JvmStatic
+        fun dispatchToLive(req: Request): Boolean {
+            val act = live ?: return false
+            if (act.isFinishing || act.isDestroyed) {
+                live = null
+                return false
+            }
+            if (act.curSiteKey != req.siteKey) return false
+            act.dispatch(req)
+            return true
+        }
+
+        /** 立刻收掉页面（切站点 / spider 销毁时） */
         @JvmStatic
         fun finishIfRunning(siteKey: String?) {
             pending = null
+            val act = live ?: return
+            live = null
+            act.mainHandler.post { act.finishNow() }
         }
+
+        private fun varKey(siteKey: String, key: String?): String =
+            "html_var_" + siteKey + "_" + (key ?: "")
+
     }
 }
