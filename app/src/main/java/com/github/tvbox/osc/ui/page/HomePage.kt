@@ -107,6 +107,7 @@ import com.github.tvbox.osc.ui.components.HomeHeroBackdrop
 import com.github.tvbox.osc.ui.components.LoadState
 import com.github.tvbox.osc.ui.components.homeHeroBackdropSupported
 import com.github.tvbox.osc.ui.UiDimens
+import com.github.tvbox.osc.ui.rememberUiScale
 import com.github.tvbox.osc.ui.components.LoadStateBox
 import com.github.tvbox.osc.ui.components.LocalSheetDismiss
 import com.github.tvbox.osc.ui.components.SearchField
@@ -124,6 +125,7 @@ import com.github.tvbox.osc.ui.components.SiteCardShapeSingle
 import com.github.tvbox.osc.ui.components.DenseSegmentContentPadding
 import com.github.tvbox.osc.ui.components.SiteKind
 import com.github.tvbox.osc.ui.components.SiteSourceCard
+import com.github.tvbox.osc.ui.components.tableGridTexture
 import com.github.tvbox.osc.ui.components.siteKindOf
 import com.github.tvbox.osc.ui.components.SettingsRow
 import com.github.tvbox.osc.ui.components.SkeletonBox
@@ -535,14 +537,14 @@ fun HomePage(
     if (showSourceSheet) {
         AVBoxBottomSheet(
             onDismissRequest = { showSourceSheet = false },
-            modifier = Modifier.heightIn(
-                max = (screenHeightDp * UiDimens.sheetHeightFraction(screenHeightDp)).dp,
-            ),
+            modifier = Modifier.height((screenHeightDp * UiDimens.sheetFixedFraction()).dp),
             title = stringResource(R.string.home_subscription_source),
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             isScrollable = false,
         ) {
             val dismissAnimated = LocalSheetDismiss.current
+            val uiScale = rememberUiScale()
+            val tableCell = remember(uiScale) { UiDimens.tableCellDp(uiScale) }
             val keyboard = LocalSoftwareKeyboardController.current
             val focusManager = LocalFocusManager.current
             val subscribes by vm.subscribeItems.collectAsStateWithLifecycle()
@@ -612,7 +614,7 @@ fun HomePage(
             val perRow = if (sourceGrid) 2 else 1
             Row(
                 modifier = Modifier
-                    .weight(1f)
+                    .fillMaxWidth()
                     .padding(start = 16.dp, end = 8.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -638,21 +640,31 @@ fun HomePage(
                     )
                 }
             }
-            val listMaxHeight = UiDimens.sheetListMaxHeightDp(screenHeightDp)
             val listModifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = listMaxHeight)
                 .clearFocusOnDrag(focusManager)
                 .pointerInput(focusManager) {
                     detectTapGestures(onTap = { focusManager.clearFocus() })
                 }
-            // 站点数变化后强制重建列表：否则列表高度会停在刷新前的尺寸，
-            // 站点大量减少时弹窗下方会留下一片空白。
-            key(visible.size, perRow) {
-                    LazyColumn(
+            // 列表区高度固定（占满顶部控件之外的剩余空间）：
+            // 站点少时下方留白并显示表格纹理，站点多时在区内滚动，
+            // 弹窗本身大小恒定，不会随站点数量变化。
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .tableGridTexture(
+                        cellWidth = tableCell,
+                        cellHeight = tableCell,
+                        lineColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f),
+                    ),
+            ) {
+                LazyColumn(
                     state = listState,
                     modifier = listModifier,
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     if (visible.isEmpty()) {
@@ -701,22 +713,26 @@ fun HomePage(
                             }
                         }
                     }
-                    item {
-                        SettingsGroup(title = null, modifier = Modifier.padding(top = 20.dp)) {
-                            SettingsCard(
-                                position = SettingsCardPosition.SINGLE,
-                                color = MaterialTheme.colorScheme.surfaceBright,
-                            ) {
-                                SettingsRow(
-                                    title = stringResource(R.string.settings_config_manage),
-                                    onClick = {
-                                        dismissAnimated()
-                                        ConfigManageActivity.start(context)
-                                    },
-                                )
-                            }
-                        }
-                    }
+                }
+            }
+            // 配置管理置底：不随列表滚动，始终贴在弹窗底部。
+            SettingsGroup(
+                title = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 16.dp),
+            ) {
+                SettingsCard(
+                    position = SettingsCardPosition.SINGLE,
+                    color = MaterialTheme.colorScheme.surfaceBright,
+                ) {
+                    SettingsRow(
+                        title = stringResource(R.string.settings_config_manage),
+                        onClick = {
+                            dismissAnimated()
+                            ConfigManageActivity.start(context)
+                        },
+                    )
                 }
             }
         }
