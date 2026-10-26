@@ -3,6 +3,8 @@ package com.github.tvbox.osc.ui.activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import com.github.tvbox.osc.util.HawkConfig
+import com.github.tvbox.osc.util.KV
 import android.content.res.Configuration
 import android.net.Uri
 import android.os.Looper
@@ -409,6 +411,7 @@ class DetailActivity : BaseActivity(), PageHost {
 
     private fun applyVideoOrientation(portraitVideo: Boolean) {
         if (!fullScreen || portraitVideo) return
+        if (!KV.get(HawkConfig.PLAY_AUTO_LANDSCAPE, HawkConfig.PLAY_AUTO_LANDSCAPE_DEFAULT)) return
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
     }
 
