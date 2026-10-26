@@ -410,6 +410,8 @@
     <string name="settings_play_prefer_aac">AAC 优先</string>
     <string name="settings_music_page">音乐播放页</string>
     <string name="settings_music_page_subtitle">识别为纯音频时自动打开</string>
+    <string name="settings_play_auto_landscape">解析到视频后自动横屏</string>
+    <string name="settings_play_auto_landscape_subtitle">关闭后保持进入播放时的方向，不再强制横屏</string>
 
     <string name="toast_config_parse_failed">配置解析失败</string>
     <string name="toast_config_fetch_failed">拉取配置失败\n%1$s</string>
