@@ -385,6 +385,11 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                                     vm.requestSwitch(item, mIsVod)
                                 } else if (!mIsVod) {
                                     vm.followLiveNow()
+                                } else {
+                                    ctx.startActivity(
+                                        Intent(ctx, MainActivity::class.java)
+                                            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    )
                                 }
                             },
                         )
