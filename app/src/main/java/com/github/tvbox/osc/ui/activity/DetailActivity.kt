@@ -129,11 +129,17 @@ class DetailActivity : BaseActivity(), PageHost {
                     return
                 }
                 if (vm.exitingFullscreen.value) return
-                if (!fullScreen &&
-                    resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                ) {
-                    portraitLockPending = true
-                    requestedOrientation = orientationPolicyValue()
+                if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                    // 横屏状态下的第一次返回：无论是否全屏，一律先转回竖屏，不退出页面
+                    lockPortrait()
+                    if (fullScreen) {
+                        if (container != null && container.onBackPressed()) return
+                        if (DetailPlaybackPolicy.plan(DetailPlaybackEntry.ExitFullscreen).stopPlayback) {
+                            container?.stopForExitFullscreen()
+                        }
+                        vm.onFullScreenToggleRequested(false, playbackFacts())
+                        container?.hideTipOnUiThread()
+                    }
                     return
                 }
                 if (fullScreen) {
@@ -383,10 +389,11 @@ class DetailActivity : BaseActivity(), PageHost {
         fullScreen = full
         if (full) {
             portraitLockPending = false
-        } else if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-            portraitLockPending = true
+            requestedOrientation = orientationPolicyValue()
+        } else {
+            // 退出全屏后只要还在横屏，就锁回竖屏
+            lockPortrait()
         }
-        requestedOrientation = orientationPolicyValue()
         if (full) {
             armVideoSizeWatch()
             hideSysBar()
@@ -436,11 +443,18 @@ class DetailActivity : BaseActivity(), PageHost {
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
-        if (portraitLockPending && newConfig.orientation == Configuration.ORIENTATION_PORTRAIT) {
-            portraitLockPending = false
-            requestedOrientation = orientationPolicyValue()
+        if (portraitLockPending &&
+            newConfig.orientation != Configuration.ORIENTATION_PORTRAIT
+        ) {
+            // 转竖屏完成前不要松锁，否则会被传感器重新带回横屏
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
         }
         settleRotationAfterExit()
+    }
+
+    private fun lockPortrait() {
+        portraitLockPending = true
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
     }
 
     fun settleRotationAfterExit() {
