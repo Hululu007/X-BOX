@@ -192,7 +192,7 @@ fun PlaySettingsScreen(onNavigateBack: () -> Unit, vm: SettingsViewModel = viewM
                         onCheckedChange = { vm.put(HawkConfig.PLAY_PREFER_AAC, it) },
                     )
                 }
-                SettingsCard(SettingsCardPosition.LAST) {
+                SettingsCard(SettingsCardPosition.MIDDLE) {
                     SettingsSwitchRow(
                         title = stringResource(R.string.settings_music_page),
                         leadingIconRes = R.drawable.ic_music_page,
@@ -202,6 +202,15 @@ fun PlaySettingsScreen(onNavigateBack: () -> Unit, vm: SettingsViewModel = viewM
                             MusicSettings.setAutoOpenPage(it)
                             vm.refresh()
                         },
+                    )
+                }
+                SettingsCard(SettingsCardPosition.LAST) {
+                    SettingsSwitchRow(
+                        title = stringResource(R.string.settings_play_auto_landscape),
+                        leadingIconRes = R.drawable.ic_player_rotate,
+                        subtitle = stringResource(R.string.settings_play_auto_landscape_subtitle),
+                        checked = state.autoLandscape,
+                        onCheckedChange = { vm.put(HawkConfig.PLAY_AUTO_LANDSCAPE, it) },
                     )
                 }
             }
