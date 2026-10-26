@@ -101,6 +101,7 @@ class HomeViewModel : ViewModel() {
     private var loadingSourceKey: String? = null
     private var configReloading = false
     private var watchdogJob: Job? = null
+    private var watchdogGrace = 0
 
     var activeSortId: String? = null
         private set
@@ -246,6 +247,7 @@ class HomeViewModel : ViewModel() {
         sortsLoaded.value = false
         sortLoadFailed.value = false
         sortRetried = false
+        watchdogGrace = 0
         listRetried.clear()
         rec.value = Rec(PartitionState.Loading, emptyList())
         partitions.value = emptyList()
@@ -258,6 +260,13 @@ class HomeViewModel : ViewModel() {
     }
 
     private fun onHomeLoadTimeout() {
+        // 切换在线接口时，配置下载/解析本身就可能超过 20s。此时报“加载失败”属于误判：
+        // 数据随后到达又会自动显示，用户只会看到一个假失败。重载中额外给几次宽限。
+        if (configReloading && watchdogGrace < 3) {
+            watchdogGrace++
+            armWatchdog()
+            return
+        }
         val recLoading = rec.value.state == PartitionState.Loading
         val partitionLoading = partitions.value.any { it.state == PartitionState.Loading }
         if (!recLoading && !partitionLoading) return
@@ -293,6 +302,7 @@ class HomeViewModel : ViewModel() {
         rec.value = Rec(PartitionState.Loading, emptyList())
         sortsLoaded.value = false
         pageLoading.value = true
+        watchdogGrace = 0
         armWatchdog()
         sortViewModel.getSort(key, HomeSettings.current() == HomeSettings.HomeLayout.Horizontal)
     }
