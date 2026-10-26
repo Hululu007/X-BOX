@@ -54,6 +54,7 @@ class DetailActivity : BaseActivity(), PageHost {
     var playContainer: PlayContainer? by mutableStateOf<PlayContainer?>(null)
         private set
     private var fullScreen = false
+    private var portraitLockPending = false
     private var pendingEpisodeSync = false
     private var videoSizeWatchArmed = false
     private var castWaitAttempts = 0
@@ -128,6 +129,13 @@ class DetailActivity : BaseActivity(), PageHost {
                     return
                 }
                 if (vm.exitingFullscreen.value) return
+                if (!fullScreen &&
+                    resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                ) {
+                    portraitLockPending = true
+                    requestedOrientation = orientationPolicyValue()
+                    return
+                }
                 if (fullScreen) {
                     if (container != null && container.onBackPressed()) return
                     if (DetailPlaybackPolicy.plan(DetailPlaybackEntry.ExitFullscreen).stopPlayback) {
@@ -373,6 +381,11 @@ class DetailActivity : BaseActivity(), PageHost {
     fun applyFullscreen(full: Boolean) {
         if (fullScreen == full) return
         fullScreen = full
+        if (full) {
+            portraitLockPending = false
+        } else if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            portraitLockPending = true
+        }
         requestedOrientation = orientationPolicyValue()
         if (full) {
             armVideoSizeWatch()
@@ -409,14 +422,24 @@ class DetailActivity : BaseActivity(), PageHost {
         applyVideoOrientation(portraitVideo)
     }
 
+    override fun orientationPolicyValue(): Int {
+        if (portraitLockPending) return ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+        return super.orientationPolicyValue()
+    }
+
     private fun applyVideoOrientation(portraitVideo: Boolean) {
         if (!fullScreen) return
+        if (portraitVideo) return
         if (!KV.get(HawkConfig.PLAY_AUTO_LANDSCAPE, HawkConfig.PLAY_AUTO_LANDSCAPE_DEFAULT)) return
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
+        if (portraitLockPending && newConfig.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            portraitLockPending = false
+            requestedOrientation = orientationPolicyValue()
+        }
         settleRotationAfterExit()
     }
 

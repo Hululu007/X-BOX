@@ -85,6 +85,7 @@ import com.github.tvbox.osc.util.AppManager
 import com.github.tvbox.osc.util.BootGuard
 import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.HomeSettings
+import com.github.tvbox.osc.util.HomeTabRequest
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.github.tvbox.osc.util.KV
@@ -137,6 +138,14 @@ private fun MainContent() {
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { AppTab.entries.size })
     val homeViewModel: HomeViewModel = viewModel()
+    val homeTabToken = HomeTabRequest.token
+
+    LaunchedEffect(homeTabToken) {
+        if (homeTabToken > 0) {
+            withFrameNanos { }
+            pagerState.scrollToPage(0)
+        }
+    }
 
     LaunchedEffect(Unit) {
         if (homeViewModel.defaultLiveLaunched) return@LaunchedEffect

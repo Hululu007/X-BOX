@@ -29,7 +29,7 @@ object HawkConfig {
     const val PLAY_TUNNEL = "play_tunnel"
     const val PLAY_PREFER_AAC = "play_prefer_aac"
     const val PLAY_AUTO_LANDSCAPE = "play_auto_landscape"
-    const val PLAY_AUTO_LANDSCAPE_DEFAULT = true
+    const val PLAY_AUTO_LANDSCAPE_DEFAULT = false
     const val KERNEL_PREWARM = "kernel_prewarm"
     const val KERNEL_PREWARM_DEFAULT = true
     const val EXO_VIDEO_DYNAMIC_SCHEDULING = "exo_video_dynamic_scheduling"
