@@ -55,7 +55,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import android.app.Activity
 import android.content.Intent
 import com.github.tvbox.osc.ui.activity.MainActivity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -352,17 +351,6 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                     val cardContent: @Composable (String, Modifier) -> Unit = { value, cardModifier ->
                         val item = parseSubscribe(value)
                         val ctx = LocalContext.current
-                        val goHome: () -> Unit = {
-                            ctx.startActivity(
-                                Intent(ctx, MainActivity::class.java)
-                                    .putExtra(MainActivity.EXTRA_GO_HOME, true)
-                                    .addFlags(
-                                        Intent.FLAG_ACTIVITY_SINGLE_TOP or
-                                            Intent.FLAG_ACTIVITY_CLEAR_TOP
-                                    )
-                            )
-                            (ctx as? Activity)?.finish()
-                        }
                         val inUse = if (mIsVod) {
                             item.url == activeUrl || HistoryHelper.isApiLineSourceOf(item.url, activeUrl)
                         } else {
@@ -382,8 +370,12 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                                 if (manageMode) {
                                     vm.toggleSelected(value)
                                 } else if (inUse) {
-                                    // 已经在这个接口上，再点一次就是“用这个接口去看”，直接回首页宫格
-                                    goHome()
+                                    // 已经在这个接口上，再点一次就是“用这个接口去看”，直接回首页
+                                    MainTabRequest.target.value = MainTabRequest.TAB_HOME
+                                    ctx.startActivity(
+                                        Intent(ctx, MainActivity::class.java)
+                                            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    )
                                 } else {
                                     vm.requestSwitch(item, mIsVod)
                                 }
@@ -395,7 +387,11 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                                 } else if (!mIsVod) {
                                     vm.followLiveNow()
                                 } else {
-                                    goHome()
+                                    MainTabRequest.target.value = MainTabRequest.TAB_HOME
+                                    ctx.startActivity(
+                                        Intent(ctx, MainActivity::class.java)
+                                            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                                    )
                                 }
                             },
                         )

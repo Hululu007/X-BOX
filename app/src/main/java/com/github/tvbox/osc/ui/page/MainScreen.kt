@@ -85,10 +85,10 @@ import com.github.tvbox.osc.util.AppManager
 import com.github.tvbox.osc.util.BootGuard
 import com.github.tvbox.osc.util.HawkConfig
 import com.github.tvbox.osc.util.HomeSettings
-import com.github.tvbox.osc.util.HomeTabRequest
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.github.tvbox.osc.util.KV
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 private enum class AppTab(@StringRes val labelRes: Int, @DrawableRes val icon: Int) {
@@ -96,6 +96,12 @@ private enum class AppTab(@StringRes val labelRes: Int, @DrawableRes val icon: I
     RECORDS(R.string.tab_records, R.drawable.ic_tab_records),
     FOLLOWING(R.string.tab_following, R.drawable.ic_tab_following),
     SETTINGS(R.string.tab_mine, R.drawable.ic_tab_mine),
+}
+
+/** 跨页面请求切换到指定 tab（0 = 首页）。配置管理等页面回首页时置值。 */
+object MainTabRequest {
+    const val TAB_HOME = 0
+    val target = MutableStateFlow<Int?>(null)
 }
 
 @Composable
@@ -138,14 +144,6 @@ private fun MainContent() {
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { AppTab.entries.size })
     val homeViewModel: HomeViewModel = viewModel()
-    val homeTabToken = HomeTabRequest.token
-
-    LaunchedEffect(homeTabToken) {
-        if (homeTabToken > 0) {
-            withFrameNanos { }
-            pagerState.scrollToPage(0)
-        }
-    }
 
     LaunchedEffect(Unit) {
         if (homeViewModel.defaultLiveLaunched) return@LaunchedEffect
@@ -168,6 +166,15 @@ private fun MainContent() {
         withFrameNanos { }
         pagerState.scrollBy(1f)
         pagerState.scrollBy(-1f)
+    }
+
+    LaunchedEffect(pagerState) {
+        MainTabRequest.target.collect { index ->
+            if (index != null) {
+                pagerState.scrollToPage(index)
+                MainTabRequest.target.value = null
+            }
+        }
     }
 
     BackHandler {
