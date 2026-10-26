@@ -410,7 +410,7 @@ class DetailActivity : BaseActivity(), PageHost {
     }
 
     private fun applyVideoOrientation(portraitVideo: Boolean) {
-        if (!fullScreen || portraitVideo) return
+        if (!fullScreen) return
         if (!KV.get(HawkConfig.PLAY_AUTO_LANDSCAPE, HawkConfig.PLAY_AUTO_LANDSCAPE_DEFAULT)) return
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
     }
