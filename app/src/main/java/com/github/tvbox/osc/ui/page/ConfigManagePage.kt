@@ -350,6 +350,7 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                     }
                     val cardContent: @Composable (String, Modifier) -> Unit = { value, cardModifier ->
                         val item = parseSubscribe(value)
+                        val ctx = LocalContext.current
                         val inUse = if (mIsVod) {
                             item.url == activeUrl || HistoryHelper.isApiLineSourceOf(item.url, activeUrl)
                         } else {
@@ -370,7 +371,6 @@ fun ConfigManageScreen(onNavigateBack: () -> Unit) {
                                     vm.toggleSelected(value)
                                 } else if (inUse) {
                                     // 已经在这个接口上，再点一次就是“用这个接口去看”，直接回首页
-                                    val ctx = LocalContext.current
                                     ctx.startActivity(
                                         Intent(ctx, MainActivity::class.java)
                                             .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
