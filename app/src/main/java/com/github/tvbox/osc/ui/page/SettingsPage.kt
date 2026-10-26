@@ -104,6 +104,7 @@ data class SettingsState(
     val preloadDuration: Int,
     val playCache: Boolean,
     val exoCacheSizeMb: Int,
+    val autoLandscape: Boolean,
     val dohIndex: Int,
     val cacheSizeText: String = "",
 )
@@ -195,6 +196,7 @@ class SettingsViewModel : ViewModel() {
         preloadDuration = KV.get(HawkConfig.PRELOAD_DURATION, HawkConfig.PRELOAD_DURATION_DEFAULT),
         playCache = KV.get(HawkConfig.PLAY_CACHE, false),
         exoCacheSizeMb = KV.get(HawkConfig.EXO_CACHE_SIZE_MB, HawkConfig.EXO_CACHE_SIZE_MB_DEFAULT),
+        autoLandscape = KV.get(HawkConfig.PLAY_AUTO_LANDSCAPE, HawkConfig.PLAY_AUTO_LANDSCAPE_DEFAULT),
         dohIndex = KV.get(HawkConfig.DOH_URL, 0),
         cacheSizeText = cacheSizeText,
     )
