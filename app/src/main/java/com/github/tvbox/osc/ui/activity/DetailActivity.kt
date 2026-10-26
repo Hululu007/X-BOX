@@ -130,16 +130,10 @@ class DetailActivity : BaseActivity(), PageHost {
                 }
                 if (vm.exitingFullscreen.value) return
                 if (resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                    // 横屏状态下的第一次返回：无论是否全屏，一律先转回竖屏，不退出页面
+                    // 横屏返回第一步：只转回竖屏（等同点播放器旋转按钮），播放页保持不退出。
+                    // 再按一次返回才退出全屏、回到详情页
+                    if (container != null && container.onBackPressed()) return
                     lockPortrait()
-                    if (fullScreen) {
-                        if (container != null && container.onBackPressed()) return
-                        if (DetailPlaybackPolicy.plan(DetailPlaybackEntry.ExitFullscreen).stopPlayback) {
-                            container?.stopForExitFullscreen()
-                        }
-                        vm.onFullScreenToggleRequested(false, playbackFacts())
-                        container?.hideTipOnUiThread()
-                    }
                     return
                 }
                 if (fullScreen) {
@@ -455,6 +449,14 @@ class DetailActivity : BaseActivity(), PageHost {
     private fun lockPortrait() {
         portraitLockPending = true
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
+    }
+
+    /**
+     * 手动点播放器旋转按钮时解除竖屏锁定，
+     * 否则 onConfigurationChanged 会把刚转过去的横屏又拉回竖屏。
+     */
+    fun clearPortraitLock() {
+        portraitLockPending = false
     }
 
     fun settleRotationAfterExit() {

@@ -12,6 +12,7 @@ import com.github.tvbox.osc.player.PlayerHelper
 import com.github.tvbox.osc.player.state.LockVisibility
 import com.github.tvbox.osc.player.state.PlayerActions
 import com.github.tvbox.osc.player.state.SelectDialogState
+import com.github.tvbox.osc.ui.activity.DetailActivity
 import com.github.tvbox.osc.util.LOG
 import org.json.JSONException
 import java.text.SimpleDateFormat
@@ -241,7 +242,10 @@ internal class PlayerActionsDelegate(private val host: VideoPlayerController) : 
         if (host.state.locked) return
         val toPortrait =
             host.resources.configuration.orientation != Configuration.ORIENTATION_PORTRAIT
-        host.playerActivity()?.requestedOrientation =
+        val activity = host.playerActivity()
+        // 手动旋转时解除竖屏锁定，否则会被 DetailActivity 的转屏逻辑拉回竖屏
+        (activity as? DetailActivity)?.clearPortraitLock()
+        activity?.requestedOrientation =
             if (toPortrait) ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT
             else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         hideBottom()
